@@ -1,6 +1,5 @@
-#include "keymap.h"
 #include "config.h"
-#include <sys/queue.h>
+#include "keymap.h"
 
 // Define keymaps for each layer
 static const key_definition_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {

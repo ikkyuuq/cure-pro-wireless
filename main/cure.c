@@ -3,7 +3,7 @@
 #include "hid_gatt_svr_svc.h"
 #include "kb_matrix.h"
 
-// Expose the pin arrays for debugging
+// Expose the pin arrays for DEVging
 extern const gpio_num_t row_pins[MATRIX_ROW];
 extern const gpio_num_t col_pins[MATRIX_COL];
 

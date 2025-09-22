@@ -5,6 +5,7 @@
 #include "common.h"
 
 #define IS_MASTER     1
+#define DEV         0
 
 #define MATRIX_ROW    5
 #define MATRIX_COL    6
@@ -32,7 +33,12 @@
 #define HID_DEVICE_NAME     "CureProWL"
 #define HID_MANUFACTURER    "Kppras Keyboards"
 
-#define MATRIX_TASK_STACK_SIZE  2048  // Matrix scaning task
+#if DEV
+#define MATRIX_TASK_STACK_SIZE  4096  // Matrix scaning task
+#else
+#define MATRIX_TASK_STACK_SIZE  2560  // Matrix scaning task
+#endif  // DEV
+
 #define HID_TASK_STACK_SIZE     3072  // HID task sending between havles
 #define POWER_TASK_STACK_SIZE   1536  // Power task management
 

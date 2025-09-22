@@ -1,7 +1,7 @@
 #ifndef KEYMAP_H
 #define KEYMAP_H
 
-#include "config.h"
+#include "hid_gatt_svr_svc.h"
 
 // Key type definitions
 typedef enum {
