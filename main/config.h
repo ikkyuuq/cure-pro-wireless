@@ -1,4 +1,5 @@
 #ifndef CONFIG_H
+
 #define CONFIG_H
 
 #include "common.h"
@@ -15,7 +16,7 @@
 // Timing Configuration
 #define DEBOUNCE_TIME_MS    5
 #define TAP_TIMEOUT_MS      200
-#define SCAN_INTERVAL_MS    1
+#define SCAN_INTERVAL_MS    10
 #define IDLE_TIMEOUT_MS     30000
 
 // Wireless Configuration
@@ -31,16 +32,16 @@
 #define HID_DEVICE_NAME     "CureProWL"
 #define HID_MANUFACTURER    "Kppras Keyboards"
 
-#define MATRIX_TASK_STACK_SIZE  2048
-#define HID_TASK_STACK_SIZE     3072
-#define POWER_TASK_STACK_SIZE   1536
+#define MATRIX_TASK_STACK_SIZE  2048  // Matrix scaning task
+#define HID_TASK_STACK_SIZE     3072  // HID task sending between havles
+#define POWER_TASK_STACK_SIZE   1536  // Power task management
 
 #define MATRIX_SCAN_PRIORITY    5
-#define WIRELESS_PRIORITY       4
-#define HID_PRIORITY           3
+#define HID_PRIORITY            4
+#define POWER_PRIORITY          3
 
 // Keyboard Layer Configuration
 #define MAX_LAYERS          3
 #define DEFAULT_LAYER       0
 
-#endif
+#endif  // CONFIG_H

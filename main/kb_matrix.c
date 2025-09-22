@@ -1,6 +1,6 @@
 #include "kb_matrix.h"
 #include "config.h"
-#include "esp_hidd.h"
+#include "hid_gatt_svr_svc.h"
 #include "keymap.h"
 
 const gpio_num_t row_pins[MATRIX_ROW] = ROW_PINS;

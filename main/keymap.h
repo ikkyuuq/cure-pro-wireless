@@ -2,7 +2,6 @@
 #define KEYMAP_H
 
 #include "config.h"
-#include "hid_svc.h"
 
 // Key type definitions
 typedef enum {

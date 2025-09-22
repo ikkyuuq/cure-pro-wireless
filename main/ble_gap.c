@@ -1,17 +1,12 @@
-#include "gap.h"
+#include "ble_gap.h"
 #include "esp_bt.h"
-#include "host/ble_gap.h"
-#include "host/ble_hs.h"
-#include "host/ble_sm.h"
-#include "host/ble_uuid.h"
-#include "nimble/ble.h"
 
 static const char *TAG = "GAP";
 
 #if CONFIG_BT_NIMBLE_ENABLED
 #define GATT_SVR_SVC_HID_UUID 0x1812
 
-extern void ble_hid_task_start_up(void);
+extern void hid_task_start_up(void);
 static struct ble_hs_adv_fields fields;
 
 static SemaphoreHandle_t bt_hidh_cb_semaphore = NULL;
@@ -24,8 +19,7 @@ static SemaphoreHandle_t ble_hidh_cb_semaphore = NULL;
 
 #define SIZEOF_ARRAY(a) (sizeof(a) / sizeof(*a))
 
-esp_err_t esp_hid_ble_gap_adv_init(uint16_t appearance,
-                                   const char *device_name) {
+esp_err_t gap_adv_init(uint16_t appearance) {
   ble_uuid16_t *uuid16, *uuid16_1;
   /**
    *  Set the advertisement data included in our advertisements:
@@ -38,8 +32,8 @@ esp_err_t esp_hid_ble_gap_adv_init(uint16_t appearance,
   memset(&fields, 0, sizeof fields);
 
 
-  fields.name = (uint8_t *)device_name;
-  fields.name_len = strlen(device_name);
+  fields.name = (uint8_t *)DEVICE_NAME;
+  fields.name_len = strlen(DEVICE_NAME);
   fields.name_is_complete = 1;
 
   /* Advertise two flags:
@@ -58,6 +52,7 @@ esp_err_t esp_hid_ble_gap_adv_init(uint16_t appearance,
   fields.tx_pwr_lvl_is_present = 1;
   fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
 
+  /* Use default info to advertising as GATT_SVR_SVC_HID */
   uuid16 = (ble_uuid16_t *)malloc(sizeof(ble_uuid16_t));
   uuid16_1 = (ble_uuid16_t[]){BLE_UUID16_INIT(GATT_SVR_SVC_HID_UUID)};
 
@@ -68,7 +63,7 @@ esp_err_t esp_hid_ble_gap_adv_init(uint16_t appearance,
 
   /* Initialize the security configuration */
   ble_hs_cfg.sm_io_cap = BLE_SM_IO_CAP_NO_IO;
-  ble_hs_cfg.sm_bonding = 0;
+  ble_hs_cfg.sm_bonding = 1;
   ble_hs_cfg.sm_mitm = 0;
   ble_hs_cfg.sm_sc = 0;
   ble_hs_cfg.sm_our_key_dist =
@@ -79,7 +74,7 @@ esp_err_t esp_hid_ble_gap_adv_init(uint16_t appearance,
   return ESP_OK;
 }
 
-static int nimble_hid_gap_event(struct ble_gap_event *event, void *arg) {
+static int gap_event_cb(struct ble_gap_event *event, void *arg) {
   struct ble_gap_conn_desc desc;
   int rc;
 
@@ -94,6 +89,7 @@ static int nimble_hid_gap_event(struct ble_gap_event *event, void *arg) {
   case BLE_GAP_EVENT_DISCONNECT:
     ESP_LOGI(TAG, "disconnect; reason=%d", event->disconnect.reason);
 
+    gap_adv_start();
     return 0;
   case BLE_GAP_EVENT_CONN_UPDATE:
     /* The central has updated the connection parameters. */
@@ -102,6 +98,7 @@ static int nimble_hid_gap_event(struct ble_gap_event *event, void *arg) {
 
   case BLE_GAP_EVENT_ADV_COMPLETE:
     ESP_LOGI(TAG, "advertise complete; reason=%d", event->adv_complete.reason);
+    gap_adv_start();
     return 0;
 
   case BLE_GAP_EVENT_SUBSCRIBE:
@@ -125,7 +122,7 @@ static int nimble_hid_gap_event(struct ble_gap_event *event, void *arg) {
                 event->enc_change.status);
     rc = ble_gap_conn_find(event->enc_change.conn_handle, &desc);
     assert(rc == 0);
-    ble_hid_task_start_up();
+    hid_task_start_up();
     return 0;
 
   case BLE_GAP_EVENT_NOTIFY_TX:
@@ -145,7 +142,7 @@ static int nimble_hid_gap_event(struct ble_gap_event *event, void *arg) {
     /* Delete the old bond. */
     rc = ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc);
     assert(rc == 0);
-    ble_store_util_delete_peer(&desc.peer_id_addr);
+    // ble_store_util_delete_peer(&desc.peer_id_addr);
 
     /* Return BLE_GAP_REPEAT_PAIRING_RETRY to indicate that the host should
      * continue with the pairing operation.
@@ -155,7 +152,7 @@ static int nimble_hid_gap_event(struct ble_gap_event *event, void *arg) {
   return 0;
 }
 
-esp_err_t esp_hid_ble_gap_adv_start(void) {
+esp_err_t gap_adv_start(void) {
   int rc;
   struct ble_gap_adv_params adv_params;
   int32_t adv_duration_ms = 180000;
@@ -173,7 +170,7 @@ esp_err_t esp_hid_ble_gap_adv_start(void) {
   adv_params.itvl_min = BLE_GAP_ADV_ITVL_MS(30);
   adv_params.itvl_max = BLE_GAP_ADV_ITVL_MS(50);
   rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, adv_duration_ms,
-                         &adv_params, nimble_hid_gap_event, NULL);
+                         &adv_params, gap_event_cb, NULL);
 
   if (rc != 0) {
     MODLOG_DFLT(ERROR, "error enabling advertisement; rc=%d\n", rc);
@@ -212,7 +209,7 @@ static esp_err_t init_low_level(uint8_t mode) {
   return ret;
 }
 
-esp_err_t esp_hid_gap_init(uint8_t mode) {
+esp_err_t gap_init(uint8_t mode) {
   esp_err_t ret;
   if (!mode || mode > ESP_BT_MODE_BTDM) {
     ESP_LOGE(TAG, "Invalid mode given!");

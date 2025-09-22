@@ -203,4 +203,15 @@
 
 extern const unsigned char keyboardReportMap[65];
 
+typedef struct {
+  TaskHandle_t task_hdl;
+  esp_hidd_dev_t *hid_dev;
+  uint8_t protocol_mode;
+  uint8_t *buffer;
+} hid_param_t;
+
+void hid_task_start_up(void);
+void hid_task_shut_down(void);
+esp_err_t hid_svc_init(void);
+
 #endif

@@ -1,4 +1,5 @@
 #ifndef COMMON_H
+
 #define COMMON_H
 #include "sdkconfig.h"
 
@@ -18,6 +19,4 @@
 #include "nvs_flash.h"
 #include "driver/gpio.h"
 
-#define GPIO_INPUT_PIN_SEL  (1ULL<<GPIO_NUM_9)
-
-#endif
+#endif  // COMMON_H
