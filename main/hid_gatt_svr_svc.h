@@ -1,8 +1,8 @@
 #ifndef HID_SVC_H
 #define HID_SVC_H
 
+#include "common.h"
 #include "config.h"
-#include <sys/_types.h>
 
 // HID Report IDs
 #define HID_KEYBOARD_REPORT_ID   0x01

@@ -1,5 +1,4 @@
 #include "hid_gatt_svr_svc.h"
-#include "config.h"
 #include "kb_matrix.h"
 
 static const char * TAG = "HID_SVC";

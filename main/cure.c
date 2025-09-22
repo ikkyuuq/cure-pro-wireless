@@ -1,4 +1,3 @@
-#include "common.h"
 #include "ble_gap.h"
 #include "hid_gatt_svr_svc.h"
 #include "kb_matrix.h"
