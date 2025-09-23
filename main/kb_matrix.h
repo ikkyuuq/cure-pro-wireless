@@ -7,6 +7,11 @@
 
 extern esp_hidd_dev_t *hid_dev;
 
+typedef enum {
+  MT_LEFT_SIDE,
+  MT_RIGHT_SIDE,
+} matrix_side_t;
+
 typedef struct {
   uint8_t   row;
   uint8_t   col;
@@ -29,7 +34,6 @@ typedef struct {
 
 typedef struct {
   uint8_t           current_layer;
-  uint8_t           active_modifiers;
   uint32_t          layer_tap_timer[MATRIX_ROW][MATRIX_COL];
   uint32_t          mod_tap_timer[MATRIX_ROW][MATRIX_COL];
   key_definition_t  pressed_keys[MATRIX_ROW][MATRIX_COL];
@@ -40,9 +44,12 @@ typedef struct {
 
 esp_err_t matrix_init(void);
 void matrix_scan_task(void *pvParameters);
-bool matrix_scan(key_event_t *event, uint8_t *event_count);
-void matrix_set_row(uint8_t row, bool state);
-bool matrix_read_col(uint8_t col);
-void hid_process_key_event(key_event_t *events, uint8_t *event_count);
+uint8_t get_active_layer(void);
+
+void send_hid_report(hid_keyboard_report_t *report);
+void sync_active_layer(uint8_t layer);
+void desync_active_layer(uint8_t layer);
+void sync_modifier(hid_keyboard_report_t *report);
+void desync_modifier(hid_keyboard_report_t *report);
 
 #endif

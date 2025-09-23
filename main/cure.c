@@ -1,4 +1,5 @@
 #include "ble_gap.h"
+#include "espnow.h"
 #include "hid_gatt_svr_svc.h"
 #include "kb_matrix.h"
 
@@ -6,8 +7,11 @@
 extern const gpio_num_t row_pins[MATRIX_ROW];
 extern const gpio_num_t col_pins[MATRIX_COL];
 
+#if DEV
 static const char *TAG = "DEV";
+#endif
 
+#if IS_MASTER
 #if CONFIG_BT_BLE_ENABLED || CONFIG_BT_NIMBLE_ENABLED
 
 void ble_host_tasks(void *param) {
@@ -18,7 +22,8 @@ void ble_host_tasks(void *param) {
 
 void ble_store_config_init(void);
 
-#endif
+#endif // CONFIG_BT_BLE_ENABLED || CONFIG_BT_NIMBLE_ENABLED
+#endif // IS_MASTER
 
 void app_main(void) {
   esp_err_t ret;
@@ -35,7 +40,10 @@ void app_main(void) {
   }
   ESP_ERROR_CHECK(ret);
 
-  ESP_LOGI(TAG, "setting hid gap, mode: %d", HID_DEV_MODE);
+  ret = espnow_init();
+  ESP_ERROR_CHECK(ret);
+
+#if IS_MASTER
   ret = gap_init(HID_DEV_MODE);
   ESP_ERROR_CHECK(ret);
 
@@ -55,6 +63,7 @@ void app_main(void) {
 
   ret = gap_adv_start();
   ESP_ERROR_CHECK(ret);
+#endif  // IS_MASTER
 
   ret = matrix_init();
   ESP_ERROR_CHECK(ret);

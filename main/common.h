@@ -11,6 +11,11 @@
 #include "esp_bt.h"
 #include "esp_hid_common.h"
 #include "esp_hidd.h"
+#include "esp_event.h"
+#include "esp_now.h"
+#include "esp_netif.h"
+#include "esp_wifi.h"
+#include "esp_mac.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"

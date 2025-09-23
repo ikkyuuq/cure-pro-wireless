@@ -1,12 +1,14 @@
 #include "ble_gap.h"
 #include "esp_bt.h"
+#include "espnow.h"
+#include "handler.h"
+#include "kb_matrix.h"
 
 static const char *TAG = "GAP";
 
 #if CONFIG_BT_NIMBLE_ENABLED
 #define GATT_SVR_SVC_HID_UUID 0x1812
 
-extern void hid_task_start_up(void);
 static struct ble_hs_adv_fields fields;
 
 static SemaphoreHandle_t bt_hidh_cb_semaphore = NULL;
@@ -30,7 +32,6 @@ esp_err_t gap_adv_init(uint16_t appearance) {
    */
 
   memset(&fields, 0, sizeof fields);
-
 
   fields.name = (uint8_t *)DEVICE_NAME;
   fields.name_len = strlen(DEVICE_NAME);
@@ -84,10 +85,35 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
     ESP_LOGI(TAG, "connection %s; status=%d",
              event->connect.status == 0 ? "established" : "failed",
              event->connect.status);
+
+    if (event->connect.status == 0) {
+      if (!matrix_task_hdl) {
+        xTaskCreate(matrix_scan_task, "matrix_scan", MATRIX_TASK_STACK_SIZE,
+                    NULL, MATRIX_SCAN_PRIORITY, &matrix_task_hdl);
+      }
+      espnow_requied_data_t data = {0};
+      data.conn = true;
+      send_to_espnow(MT_RIGHT_SIDE, CONN, &data);
+    } else {
+      if (matrix_task_hdl) {
+        vTaskDelete(matrix_task_hdl);
+        matrix_task_hdl = NULL;
+      }
+      espnow_requied_data_t data = {0};
+      data.conn = false;
+      send_to_espnow(MT_RIGHT_SIDE, CONN, &data);
+    }
     return 0;
     break;
   case BLE_GAP_EVENT_DISCONNECT:
     ESP_LOGI(TAG, "disconnect; reason=%d", event->disconnect.reason);
+    if (matrix_task_hdl) {
+      vTaskDelete(matrix_task_hdl);
+      matrix_task_hdl = NULL;
+    }
+    espnow_requied_data_t data = {0};
+    data.conn = false;
+    send_to_espnow(MT_RIGHT_SIDE, CONN, &data);
 
     gap_adv_start();
     return 0;
@@ -122,7 +148,6 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
                 event->enc_change.status);
     rc = ble_gap_conn_find(event->enc_change.conn_handle, &desc);
     assert(rc == 0);
-    hid_task_start_up();
     return 0;
 
   case BLE_GAP_EVENT_NOTIFY_TX:

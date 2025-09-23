@@ -4,8 +4,8 @@
 
 #include "common.h"
 
-#define IS_MASTER     1
-#define DEV         0
+#define IS_MASTER     0
+#define DEV           1
 
 #define MATRIX_ROW    5
 #define MATRIX_COL    6
@@ -35,19 +35,30 @@
 
 #if DEV
 #define MATRIX_TASK_STACK_SIZE  4096  // Matrix scaning task
+#define ESPNOW_TASK_STACK_SIZE  4096  // ESPNOW task sending between havles
 #else
 #define MATRIX_TASK_STACK_SIZE  2560  // Matrix scaning task
+#define ESPNOW_TASK_STACK_SIZE  3072  // ESPNOW task sending between havles
 #endif  // DEV
 
-#define HID_TASK_STACK_SIZE     3072  // HID task sending between havles
 #define POWER_TASK_STACK_SIZE   1536  // Power task management
 
 #define MATRIX_SCAN_PRIORITY    5
-#define HID_PRIORITY            4
+#define ESPNOW_PRIORITY         4
 #define POWER_PRIORITY          3
 
 // Keyboard Layer Configuration
 #define MAX_LAYERS          3
 #define DEFAULT_LAYER       0
+
+#if IS_MASTER
+  #define ESPNOW_PEER_ADDR {0xFC, 0x01, 0x2C, 0xF5, 0xF2, 0x10}
+#else
+  #define ESPNOW_PEER_ADDR {0xFC, 0x01, 0x2C, 0xF5, 0xEE, 0x8C}
+#endif
+
+#define ESP_WIFI_CHANNEL    1
+#define ESP_NOW_CHANNEL     1
+#define ESP_NOW_QUEUE_SIZE  6
 
 #endif  // CONFIG_H

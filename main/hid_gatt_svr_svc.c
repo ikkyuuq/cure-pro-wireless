@@ -19,90 +19,10 @@ static esp_hid_device_config_t ble_hid_config = {.vendor_id = 0x16C0,
                                                  .report_maps = ble_report_maps,
                                                  .report_maps_len = 1};
 
-void hid_task_start_up(void) {
-  if (s_ble_hid_param.task_hdl) {
-    return;
-  }
-  ESP_LOGI(TAG, "BLE HID Task Start Up");
-  xTaskCreate(matrix_scan_task, "matrix_scan", MATRIX_TASK_STACK_SIZE, NULL, MATRIX_SCAN_PRIORITY, NULL);
-}
-
-static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, int32_t id, void *event_data) {
-  esp_hidd_event_t event = (esp_hidd_event_t)id;
-  esp_hidd_event_data_t *param = (esp_hidd_event_data_t *)event_data;
-  static const char *TAG = "HID_DEV_BLE";
-
-  switch (event) {
-  case ESP_HIDD_START_EVENT: {
-    ESP_LOGI(TAG, "START");
-    break;
-  }
-  case ESP_HIDD_CONNECT_EVENT: {
-    ESP_LOGI(TAG, "CONNECT");
-    break;
-  }
-  case ESP_HIDD_PROTOCOL_MODE_EVENT: {
-    ESP_LOGI(TAG, "PROTOCOL MODE[%u]: %s", param->protocol_mode.map_index,
-             param->protocol_mode.protocol_mode ? "REPORT" : "BOOT");
-    break;
-  }
-  case ESP_HIDD_CONTROL_EVENT: {
-    ESP_LOGI(TAG, "CONTROL[%u]: %sSUSPEND", param->control.map_index,
-             param->control.control ? "EXIT_" : "");
-    if (param->control.control) {
-      // exit suspend
-      hid_task_start_up();
-    } else {
-      // suspend
-      hid_task_shut_down();
-    }
-    break;
-  }
-  case ESP_HIDD_OUTPUT_EVENT: {
-    ESP_LOGI(TAG,
-             "OUTPUT[%u]: %8s ID: %2u, Len: %d, Data:", param->output.map_index,
-             esp_hid_usage_str(param->output.usage), param->output.report_id,
-             param->output.length);
-    ESP_LOG_BUFFER_HEX(TAG, param->output.data, param->output.length);
-    break;
-  }
-  case ESP_HIDD_FEATURE_EVENT: {
-    ESP_LOGI(TAG, "FEATURE[%u]: %8s ID: %2u, Len: %d, Data:",
-             param->feature.map_index, esp_hid_usage_str(param->feature.usage),
-             param->feature.report_id, param->feature.length);
-    ESP_LOG_BUFFER_HEX(TAG, param->feature.data, param->feature.length);
-    break;
-  }
-  case ESP_HIDD_DISCONNECT_EVENT: {
-    ESP_LOGI(TAG, "DISCONNECT: %s",
-             esp_hid_disconnect_reason_str(
-                 esp_hidd_dev_transport_get(param->disconnect.dev),
-                 param->disconnect.reason));
-
-    hid_task_shut_down();
-    break;
-  }
-  case ESP_HIDD_STOP_EVENT: {
-    ESP_LOGI(TAG, "STOP");
-    break;
-  }
-  default:
-    break;
-  }
-  return;
-}
-
-void hid_task_shut_down(void) {
-  if (s_ble_hid_param.task_hdl) {
-    vTaskDelete(s_ble_hid_param.task_hdl);
-    s_ble_hid_param.task_hdl = NULL;
-  }
-}
-
 esp_err_t hid_svc_init(void) {
   ESP_LOGI(TAG, "Initialize HID Service");
   esp_err_t ret;
-  ret = esp_hidd_dev_init(&ble_hid_config, ESP_HID_TRANSPORT_BLE, ble_hidd_event_callback, &s_ble_hid_param.hid_dev);
+  ret = esp_hidd_dev_init(&ble_hid_config, ESP_HID_TRANSPORT_BLE, NULL, &s_ble_hid_param.hid_dev);
   if (ret != 0) {
     ESP_LOGE(TAG, "failed to init hid device, ret: %d", ret);
     return ret;
