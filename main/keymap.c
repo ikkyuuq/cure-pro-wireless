@@ -15,8 +15,8 @@ static const key_definition_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
     #else
     // Layer 0 - Base layer Right Side
     [0] = {
-        {NORM_KEY(KC_6),        NORM_KEY(KC_7),    NORM_KEY(KC_8),     NORM_KEY(KC_9),     NORM_KEY(KC_0),         NORM_KEY(KC_MINUS)},          
-        {NORM_KEY(KC_Y),        NORM_KEY(KC_U),    NORM_KEY(KC_I),     NORM_KEY(KC_O),     NORM_KEY(KC_P),         NORM_KEY(KC_BSLASH)},         
+        {NORM_KEY(KC_6),        NORM_KEY(KC_7),    NORM_KEY(KC_8),     NORM_KEY(KC_9),     NORM_KEY(KC_0),         NORM_KEY(KC_MINUS)},
+        {NORM_KEY(KC_Y),        NORM_KEY(KC_U),    NORM_KEY(KC_I),     NORM_KEY(KC_O),     NORM_KEY(KC_P),         NORM_KEY(KC_BSLASH)},
         {NORM_KEY(KC_H),        NORM_KEY(KC_J),    NORM_KEY(KC_K),     NORM_KEY(KC_L),     NORM_KEY(KC_SEMICOLON), MT(KC_RSFT, KC_QUOT)},
         {NORM_KEY(KC_N),        NORM_KEY(KC_M),    NORM_KEY(KC_COMMA), NORM_KEY(KC_DOT),   MT(KC_RALT, KC_SLASH),  MOD_KEY(KC_RCTRL)},
         {MT(KC_RSFT, KC_BSPC),  LT(1, KC_SPACE),   NORM_KEY(KC_NO),    NORM_KEY(KC_NO),    NORM_KEY(KC_NO),        NORM_KEY(KC_NO)}
@@ -32,7 +32,7 @@ static const key_definition_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
         {TRANS_KEY(),         TRANS_KEY(),         NORM_KEY(KC_LBRC),    NORM_KEY(KC_RBRC),   SHIFT_KEY(KC_LBRC),     SHIFT_KEY(KC_RBRC)},  // [ ] { }
         {NORM_KEY(KC_NO),     NORM_KEY(KC_NO),     NORM_KEY(KC_MINUS),   NORM_KEY(KC_NO),     TRANS_KEY(),            TRANS_KEY()},         // - _
     },
-    #else 
+    #else
     // Layer 1 - Function Symbol layer Right side
     [1] = {
         {NORM_KEY(KC_F6),   NORM_KEY(KC_F7),      NORM_KEY(KC_F8),    NORM_KEY(KC_F9),        NORM_KEY(KC_F10),         NORM_KEY(KC_F11)},
@@ -52,7 +52,7 @@ static const key_definition_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
         {TRANS_KEY(),         TRANS_KEY(),      NORM_KEY(KC_LBRC),              NORM_KEY(KC_RBRC),              NORM_KEY(KC_MINUS),             NORM_KEY(KC_EQUAL)},
         {NORM_KEY(KC_NO),     NORM_KEY(KC_NO),  NORM_KEY(KC_NO),                NORM_KEY(KC_NO),                TRANS_KEY(),                    TRANS_KEY()},
     },
-    #else 
+    #else
     // Layer 2 - Media Navigation layer Right side
     [2] = {
         {NORM_KEY(KC_F6),   NORM_KEY(KC_F7),        NORM_KEY(KC_F8),                NORM_KEY(KC_F9),                NORM_KEY(KC_F10),     NORM_KEY(KC_F11)},

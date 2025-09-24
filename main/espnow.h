@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "kb_matrix.h"
+#include "kb_mgt.h"
 
 typedef enum {
   CONN,
@@ -21,7 +22,7 @@ typedef enum {
 } side_t;
 
 typedef struct {
-  hid_keyboard_report_t         *report;
+  kb_mgt_hid_report_t           *report;
   uint8_t                       layer;
   bool                          conn;
 } espnow_requied_data_t;
@@ -30,7 +31,7 @@ typedef struct {
   side_t                          from;
   espnow_event_info_data_type_t   type;
   union {
-    hid_keyboard_report_t         report;
+    kb_mgt_hid_report_t           report;
     uint8_t                       layer;
     bool                          conn;
   };
@@ -62,7 +63,7 @@ typedef struct {
 
 typedef struct {
   espnow_event_type_t type;
-  espnow_event_info_t info; 
+  espnow_event_info_t info;
 } espnow_event_t;
 
 esp_err_t espnow_init(void);

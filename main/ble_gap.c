@@ -93,7 +93,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
       }
       espnow_requied_data_t data = {0};
       data.conn = true;
-      send_to_espnow(MT_RIGHT_SIDE, CONN, &data);
+      send_to_espnow(RIGHT_SIDE, CONN, &data);
     } else {
       if (matrix_task_hdl) {
         vTaskDelete(matrix_task_hdl);
@@ -101,7 +101,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
       }
       espnow_requied_data_t data = {0};
       data.conn = false;
-      send_to_espnow(MT_RIGHT_SIDE, CONN, &data);
+      send_to_espnow(RIGHT_SIDE, CONN, &data);
     }
     return 0;
     break;
@@ -113,7 +113,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
     }
     espnow_requied_data_t data = {0};
     data.conn = false;
-    send_to_espnow(MT_RIGHT_SIDE, CONN, &data);
+    send_to_espnow(RIGHT_SIDE, CONN, &data);
 
     gap_adv_start();
     return 0;
@@ -188,7 +188,7 @@ esp_err_t gap_adv_start(void) {
     return rc;
   }
 
-  /* Begin Advertisnig */
+  /* Begin Advertising */
   memset(&adv_params, 0, sizeof adv_params);
   adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
   adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;

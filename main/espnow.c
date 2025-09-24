@@ -1,8 +1,8 @@
 #include "espnow.h"
 #include "config.h"
-#include "esp_err.h"
 #include "handler.h"
 #include "kb_matrix.h"
+#include "kb_mgt.h"
 
 TaskHandle_t espnow_task_hdl = NULL;
 QueueHandle_t espnow_queue;
@@ -187,28 +187,30 @@ void espnow_task(void *pvParameters) {
         break;
 #if IS_MASTER
       case TAP:
-        send_hid_report(&data->report);
+        memcpy(kb_mgt_hid_get_current_report(), &data->report, sizeof(kb_mgt_hid_report_t));
+        kb_mgt_hid_send_report();
         break;
       case BRIEF_TAP:
-        send_hid_report(&data->report);
+        memcpy(kb_mgt_hid_get_current_report(), &data->report, sizeof(kb_mgt_hid_report_t));
+        kb_mgt_hid_send_report();
 
-        hid_keyboard_report_t empty_report = {0};
-        send_hid_report(&empty_report);
+        kb_mgt_hid_clear_report();
+        kb_mgt_hid_send_report();
         break;
 #endif
       case LAYER_SYNC:
         ESP_LOGI(TAG, "layer sync to %d", data->layer);
-        sync_active_layer(data->layer);
+        kb_mgt_sync_layer(data->layer);
         break;
       case LAYER_DESYNC:
         ESP_LOGI(TAG, "layer desync from %d", data->layer);
-        desync_active_layer(data->layer);
+        kb_mgt_desync_layer(data->layer);
         break;
       case MOD_SYNC:
-        sync_modifier(&data->report);
+        kb_mgt_sync_modifier(data->report.modifiers);
         break;
       case MOD_DESYNC:
-        desync_modifier(&data->report);
+        kb_mgt_desync_modifier(data->report.modifiers);
         break;
       default:
         break;
@@ -249,10 +251,10 @@ void send_to_espnow(side_t side, espnow_event_info_data_type_t type,
     info_data->conn = data->conn;
     break;
   case TAP:
-    memcpy(&info_data->report, data->report, sizeof(hid_keyboard_report_t));
+    memcpy(&info_data->report, data->report, sizeof(kb_mgt_hid_report_t));
     break;
   case BRIEF_TAP:
-    memcpy(&info_data->report, data->report, sizeof(hid_keyboard_report_t));
+    memcpy(&info_data->report, data->report, sizeof(kb_mgt_hid_report_t));
     break;
   case LAYER_SYNC:
     info_data->layer = data->layer;
@@ -261,17 +263,16 @@ void send_to_espnow(side_t side, espnow_event_info_data_type_t type,
     info_data->layer = data->layer;
     break;
   case MOD_SYNC:
-    memcpy(&info_data->report, data->report, sizeof(hid_keyboard_report_t));
+    memcpy(&info_data->report, data->report, sizeof(kb_mgt_hid_report_t));
     break;
   case MOD_DESYNC:
-    memcpy(&info_data->report, data->report, sizeof(hid_keyboard_report_t));
+    memcpy(&info_data->report, data->report, sizeof(kb_mgt_hid_report_t));
     break;
   default:
     break;
   }
 
-  ret = esp_now_send(espnow_peer_addr, (uint8_t *)info_data,
-                     sizeof(espnow_event_info_data_t));
+  ret = esp_now_send(espnow_peer_addr, (uint8_t *)info_data, sizeof(espnow_event_info_data_t));
   if (info_data) free(info_data);
 
   if (ret != ESP_OK) {
