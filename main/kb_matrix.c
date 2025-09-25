@@ -1,5 +1,6 @@
 #include "kb_matrix.h"
 #include "config.h"
+#include "freertos/projdefs.h"
 #include "kb_mgt.h"
 
 TaskHandle_t matrix_task_hdl = NULL;
@@ -81,7 +82,7 @@ bool matrix_scan(key_event_t *event, uint8_t *event_count) {
     // Set the current row low, all others high
     for (uint8_t r = 0; r < MATRIX_ROW; r++) { matrix_set_row(r, r != row); }
 
-    vTaskDelay(pdMS_TO_TICKS(1));
+    esp_rom_delay_us(GPIO_SETTLE_US);
 
     for (uint8_t col = 0; col < MATRIX_COL; col++) {
       bool key_state = matrix_read_col(col);
@@ -99,8 +100,9 @@ bool matrix_scan(key_event_t *event, uint8_t *event_count) {
         if (*event_count < MAX_KEYS) {
           event[*event_count].col = col;
           event[*event_count].row = row;
-          event[*event_count].pressed = raw_state; // Use the NEW state, not the old one!
+          event[*event_count].pressed = raw_state;
           event[*event_count].timestamp = current_time;
+
           (*event_count)++;
           detected_changes = true;
 
@@ -113,10 +115,10 @@ bool matrix_scan(key_event_t *event, uint8_t *event_count) {
           }
       }
 
-      vTaskDelay(pdMS_TO_TICKS(1));
+      esp_rom_delay_us(GPIO_SETTLE_US);
     }
 
-    vTaskDelay(pdMS_TO_TICKS(1));
+    esp_rom_delay_us(ROW_DELAY_US);
   }
 
   // Set all rows high when done scanning
@@ -124,7 +126,7 @@ bool matrix_scan(key_event_t *event, uint8_t *event_count) {
     matrix_set_row(r, true);
   }
 
-  vTaskDelay(pdMS_TO_TICKS(10));
+  vTaskDelay(1);
 
   return detected_changes;
 }
@@ -162,3 +164,4 @@ void matrix_scan_task(void *pvParameters) {
     vTaskDelay(pdMS_TO_TICKS(SCAN_INTERVAL_MS));
   }
 }
+

@@ -10,6 +10,7 @@ QueueHandle_t espnow_queue;
 #if DEV
 static const char *TAG = "ESPNOW";
 #endif
+
 static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int data_len);
 static void espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status);
 static void espnow_task(void *pvParameters);
@@ -113,6 +114,7 @@ esp_err_t espnow_init(void) {
 
 void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info,
                     const uint8_t *data, int data_len) {
+
   espnow_event_t event;
   event.type = EVENT_RECV_CB;
 
@@ -229,8 +231,7 @@ void espnow_task(void *pvParameters) {
   }
 }
 
-void send_to_espnow(side_t side, espnow_event_info_data_type_t type,
-                    espnow_requied_data_t *data) {
+void send_to_espnow(side_t side, espnow_event_info_data_type_t type, espnow_requied_data_t *data) {
   esp_err_t ret;
   uint8_t espnow_peer_addr[] = ESPNOW_PEER_ADDR;
 

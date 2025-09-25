@@ -4,7 +4,7 @@
 
 #include "common.h"
 
-#define IS_MASTER     1
+#define IS_MASTER     0
 #define DEV           1
 
 #define MATRIX_ROW    5
@@ -14,10 +14,14 @@
 #define ROW_PINS      {GPIO_NUM_20, GPIO_NUM_19, GPIO_NUM_18, GPIO_NUM_15, GPIO_NUM_14}
 #define COL_PINS      {GPIO_NUM_0, GPIO_NUM_1, GPIO_NUM_2, GPIO_NUM_3, GPIO_NUM_4, GPIO_NUM_5}
 
-// Timing Configuration
-#define DEBOUNCE_TIME_MS    5
-#define TAP_TIMEOUT_MS      200
-#define SCAN_INTERVAL_MS    10
+// Ultra Low Latency Configuration
+#define DEBOUNCE_TIME_MS    1     // Minimal debounce == Less latecy
+#define TAP_TIMEOUT_MS      200   // For tap-hold functionality
+#define SCAN_INTERVAL_MS    2     // aggressive polling == Less latency
+
+// Optimized GPIO timing for speed
+#define GPIO_SETTLE_US      10    // Minimal stable GPIO settling
+#define ROW_DELAY_US        5     // Minimal row completion delay
 #define IDLE_TIMEOUT_MS     30000
 
 // Wireless Configuration
@@ -43,7 +47,7 @@
 
 #define POWER_TASK_STACK_SIZE   1536  // Power task management
 
-#define MATRIX_SCAN_PRIORITY    5
+#define MATRIX_SCAN_PRIORITY    7
 #define ESPNOW_PRIORITY         4
 #define POWER_PRIORITY          3
 
