@@ -2,14 +2,13 @@
 #include "espnow.h"
 #include "hid_gatt_svr_svc.h"
 #include "kb_matrix.h"
+#include "indicator.h"
+#include "power.h"
 
-// Expose the pin arrays for DEVging
 extern const gpio_num_t row_pins[MATRIX_ROW];
 extern const gpio_num_t col_pins[MATRIX_COL];
 
-#if DEV
 static const char *TAG = "DEV";
-#endif
 
 #if IS_MASTER
 #if CONFIG_BT_BLE_ENABLED || CONFIG_BT_NIMBLE_ENABLED
@@ -67,4 +66,14 @@ void app_main(void) {
 
   ret = matrix_init();
   ESP_ERROR_CHECK(ret);
+
+  ret = usb_power_init();
+  ESP_ERROR_CHECK(ret);
+
+  power_task_start();
+
+  ret = indicator_init();
+  ESP_ERROR_CHECK(ret);
+
+  ESP_LOGI(TAG, "System initialized successfully");
 }

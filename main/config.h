@@ -5,7 +5,6 @@
 #include "common.h"
 
 #define IS_MASTER     0
-#define DEV           1
 
 #define MATRIX_ROW    5
 #define MATRIX_COL    6
@@ -13,6 +12,8 @@
 
 #define ROW_PINS      {GPIO_NUM_20, GPIO_NUM_19, GPIO_NUM_18, GPIO_NUM_15, GPIO_NUM_14}
 #define COL_PINS      {GPIO_NUM_0, GPIO_NUM_1, GPIO_NUM_2, GPIO_NUM_3, GPIO_NUM_4, GPIO_NUM_5}
+#define BATT_LED_GPIO               GPIO_NUM_15
+#define CONN_LED_GPIO               GPIO_NUM_8
 
 // Ultra Low Latency Configuration
 #define DEBOUNCE_TIME_MS    1     // Minimal debounce == Less latecy
@@ -29,27 +30,29 @@
 #define MAX_RETRY_COUNT     3
 
 // Power Management
-#define BATTERY_ADC_CHANNEL           GPIO_NUM_6
-#define LOW_BATTERY_THRESHOLD_MV      3300
-#define CRITICAL_BATTERY_THRESHOLD_MV 3000
+#define BATT_ADC_CHAN               ADC_CHANNEL_6
+#define BATT_ADC_ATTEN              ADC_ATTEN_DB_12
+#define BATT_BIT_WIDTH              ADC_BITWIDTH_12
+#define BATT_VOLTAGE_NOMINAL_MV     3300
+#define BATT_VOLTAGE_CRITICAL_MV    3000
+#define BATT_VOLTAGE_THRESHOLD_MV   4200
 
 // HID Configuration
 #define HID_DEVICE_NAME     "CureProWL"
-#define HID_MANUFACTURER    "Kppras Keyboards"
+#define HID_MANUFACTURER    "Kppras"
 
-#if DEV
-#define MATRIX_TASK_STACK_SIZE  4096  // Matrix scaning task
-#define ESPNOW_TASK_STACK_SIZE  4096  // ESPNOW task sending between havles
-#else
-#define MATRIX_TASK_STACK_SIZE  2560  // Matrix scaning task
-#define ESPNOW_TASK_STACK_SIZE  3072  // ESPNOW task sending between havles
-#endif  // DEV
 
-#define POWER_TASK_STACK_SIZE   1536  // Power task management
+#define MATRIX_TASK_STACK_SIZE      4096  // Matrix scaning task
+#define ESPNOW_TASK_STACK_SIZE      4096  // ESPNOW task sending between havles
+#define POWER_TASK_STACK_SIZE       2048  // Power task management
+#define HEARTBEAT_TASK_STACK_SIZE   2048  // Heartbeat task
+#define INDICATOR_TASK_STACK_SIZE   4096  // Power task management
 
 #define MATRIX_SCAN_PRIORITY    7
 #define ESPNOW_PRIORITY         4
 #define POWER_PRIORITY          3
+#define HEARTBEAT_PRIORITY      2  // Heartbeat task
+#define INDICATOR_PRIORITY      1  // Connection and battery indicator
 
 // Keyboard Layer Configuration
 #define MAX_LAYERS          3

@@ -17,6 +17,9 @@
 #include "esp_wifi.h"
 #include "esp_mac.h"
 
+#include "led_strip.h"
+#include "led_strip_types.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"

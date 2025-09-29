@@ -8,9 +8,7 @@ TaskHandle_t matrix_task_hdl = NULL;
 const gpio_num_t row_pins[MATRIX_ROW] = ROW_PINS;
 const gpio_num_t col_pins[MATRIX_COL] = COL_PINS;
 
-#if DEV
 static const char *TAG = "MATRIX";
-#endif
 static matrix_state_t matrix_state;
 
 esp_err_t matrix_init(void) {
@@ -27,9 +25,7 @@ esp_err_t matrix_init(void) {
 
     ret |= gpio_config(&row_config);
     if (ret != ESP_OK) {
-#if DEV
       ESP_LOGE(TAG, "failed to setup gpio config for rows");
-#endif
       return ret;
     }
     gpio_set_level(row_pins[i], 1); // Default high
@@ -46,9 +42,7 @@ esp_err_t matrix_init(void) {
     };
     ret |= gpio_config(&col_config);
     if (ret != ESP_OK) {
-#if DEV
       ESP_LOGE(TAG, "failed to setup gpio config for cols");
-#endif
       return ret;
     }
   }
@@ -106,12 +100,10 @@ bool matrix_scan(key_event_t *event, uint8_t *event_count) {
           (*event_count)++;
           detected_changes = true;
 
-#if DEV
           ESP_LOGI(TAG, "Key %s at [%d:%d] -> %s",
                    raw_state ? "pressed" : "released",
                    row, col,
                    keymap_key_to_string(keymap_get_key(kb_mgt_layer_get_active(), row, col)));
-#endif
           }
       }
 
@@ -146,15 +138,26 @@ void process_key_event(key_event_t *events, uint8_t *event_count) {
   kb_mgt_finalize_processing();
 }
 
+void matrix_scan_start(void) {
+  if (!matrix_task_hdl) {
+    xTaskCreate(matrix_scan_task, "matrix_scan", MATRIX_TASK_STACK_SIZE, NULL, MATRIX_SCAN_PRIORITY, &matrix_task_hdl);
+  }
+}
+
+void matrix_scan_stop(void) {
+  if (matrix_task_hdl) {
+    vTaskDelete(matrix_task_hdl);
+    matrix_task_hdl = NULL;
+  }
+}
+
 void matrix_scan_task(void *pvParameters) {
   key_event_t events[MAX_KEYS];
   uint8_t event_count;
 
   while (1) {
     if (matrix_scan(events, &event_count)) {
-#if DEV
       ESP_LOGD(TAG, "*** KEY EVENT DETECTED: %d events ***", event_count);
-#endif
       process_key_event(events, &event_count);
     }
 
@@ -164,4 +167,3 @@ void matrix_scan_task(void *pvParameters) {
     vTaskDelay(pdMS_TO_TICKS(SCAN_INTERVAL_MS));
   }
 }
-

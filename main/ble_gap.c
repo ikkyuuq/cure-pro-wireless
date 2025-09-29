@@ -3,6 +3,7 @@
 #include "espnow.h"
 #include "handler.h"
 #include "kb_matrix.h"
+#include "indicator.h"
 
 static const char *TAG = "GAP";
 
@@ -87,47 +88,37 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
              event->connect.status);
 
     if (event->connect.status == 0) {
-      // Ultra-low latency gaming parameters - absolute minimum
       struct ble_gap_upd_params params = {
-        .itvl_min = 6,     // 7.5ms - minimum stable interval
-        .itvl_max = 6,     // 7.5ms - keep consistent
-        .latency = 0,      // No slave latency - immediate response
-        .supervision_timeout = 100  // 1 second - faster recovery
+        .itvl_min = 6,
+        .itvl_max = 6,
+        .latency = 0,
+        .supervision_timeout = 100
       };
       int rc = ble_gap_update_params(event->connect.conn_handle, &params);
       if (rc != 0) {
-#if DEV
+
         ESP_LOGW(TAG, "Failed to request low latency params; rc=%d", rc);
 #endif
       }
-
-      if (!matrix_task_hdl) {
-        xTaskCreate(matrix_scan_task, "matrix_scan", MATRIX_TASK_STACK_SIZE,
-                    NULL, MATRIX_SCAN_PRIORITY, &matrix_task_hdl);
-      }
-      espnow_requied_data_t data = {0};
-      data.conn = true;
-      send_to_espnow(RIGHT_SIDE, CONN, &data);
+      matrix_scan_start();
+      bool conn_state = true;
+      send_to_espnow(MASTER, CONN, &conn_state);
+      indicator_set_conn_state(CONN_STATE_CONNECTED);
     } else {
-      if (matrix_task_hdl) {
-        vTaskDelete(matrix_task_hdl);
-        matrix_task_hdl = NULL;
-      }
-      espnow_requied_data_t data = {0};
-      data.conn = false;
-      send_to_espnow(RIGHT_SIDE, CONN, &data);
+      matrix_scan_stop();
+      bool conn_state = false;
+      send_to_espnow(MASTER, CONN, &conn_state);
+      indicator_set_conn_state(CONN_STATE_WAITING);
     }
     return 0;
     break;
   case BLE_GAP_EVENT_DISCONNECT:
     ESP_LOGI(TAG, "disconnect; reason=%d", event->disconnect.reason);
-    if (matrix_task_hdl) {
-      vTaskDelete(matrix_task_hdl);
-      matrix_task_hdl = NULL;
-    }
-    espnow_requied_data_t data = {0};
-    data.conn = false;
-    send_to_espnow(RIGHT_SIDE, CONN, &data);
+
+    matrix_scan_stop();
+    bool conn_state = false;
+    send_to_espnow(MASTER, CONN, &conn_state);
+    indicator_set_conn_state(CONN_STATE_WAITING);
 
     gap_adv_start();
     return 0;
@@ -285,4 +276,3 @@ esp_err_t gap_init(uint8_t mode) {
 
   return ESP_OK;
 }
-#endif

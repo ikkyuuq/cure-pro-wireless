@@ -23,5 +23,7 @@ typedef struct {
 
 esp_err_t matrix_init(void);
 void matrix_scan_task(void *pvParameters);
+void matrix_scan_start(void);
+void matrix_scan_stop(void);
 
 #endif
