@@ -101,7 +101,7 @@ key_definition_t keymap_get_key(uint8_t layer, uint8_t row, uint8_t col) {
     return keymaps[layer][row][col];
 }
 
-const char* keymap_key_to_string(key_definition_t key) {
+static const char* keymap_key_to_string(key_definition_t key) {
     switch (key.type) {
         case KEY_TYPE_NORMAL:
             switch (key.keycode) {

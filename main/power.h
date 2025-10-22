@@ -15,13 +15,7 @@ typedef struct {
   uint16_t  battery_voltage_mv;
 } power_state_t;
 
-extern power_state_t power_state;
-
 esp_err_t usb_power_init(void);
-uint32_t read_battery_voltage(void);
-
 void power_task_start(void);
-void power_task_stop(void);
-void power_task(void *pvParameters);
 
 #endif

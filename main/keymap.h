@@ -239,7 +239,5 @@ typedef struct {
 
 // Function declarations
 key_definition_t keymap_get_key(uint8_t layer, uint8_t row, uint8_t col);
-void keymap_init(void);
-const char* keymap_key_to_string(key_definition_t key);
 
 #endif

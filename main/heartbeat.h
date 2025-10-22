@@ -15,9 +15,9 @@ typedef struct {
   uint64_t  last_req_time;
 } heartbeat_state_t;
 
+// Global Functions
 void heartbeat_start(void);
 void heartbeat_stop(void);
-void heartbeat_task(void *pvParameters);
 void update_heartbeat(void);
 
 #endif  // HEARTBEAT_H

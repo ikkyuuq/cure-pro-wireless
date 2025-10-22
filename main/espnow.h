@@ -74,7 +74,6 @@ typedef struct {
 } espnow_event_t;
 
 esp_err_t espnow_init(void);
-
 void send_to_espnow(espnow_from_t from, espnow_event_info_data_type_t type, void *data);
 
 #endif  // ESPNOW_H

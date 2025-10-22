@@ -26,13 +26,6 @@ typedef struct {
   uint8_t blue;
 } color_t;
 
-// LED handles - external access
-extern led_strip_handle_t batt_indicator_hdl;
-extern led_strip_handle_t conn_indicator_hdl;
-
-// Connection and battery state variables
-extern conn_state_t current_conn_state;
-extern batt_state_t current_batt_state;
 
 // Timing constants
 #define BLINK_INTERVAL_MS       500    // 0.5 second blink interval
@@ -45,12 +38,9 @@ extern batt_state_t current_batt_state;
 #define COLOR_YELLOW    {255, 255, 0}
 
 esp_err_t indicator_init(void);
-void indicator_task(void *pvParameters);
+conn_state_t indicator_get_conn_state(void);
+batt_state_t indicator_get_batt_state(void);
 void indicator_set_conn_state(conn_state_t state);
 void indicator_set_batt_state(batt_state_t state);
-
-void set_color(color_t color, led_strip_handle_t hdl);
-void start_blinking(led_strip_handle_t hdl, color_t color);
-void stop_blinking(led_strip_handle_t hdl);
 
 #endif

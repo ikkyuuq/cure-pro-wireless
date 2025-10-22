@@ -1,19 +1,44 @@
+/**
+ * @file espnow.c
+ * @brief ESP-NOW Communication Manager for Split Keyboard
+ * 
+ * Handles wireless communication between master and slave halves using ESP-NOW protocol.
+ * Manages message queuing, event callbacks, and data synchronization across keyboard halves.
+ * 
+ * Key responsibilities:
+ * - ESP-NOW initialization and peer management
+ * - Message transmission between keyboard halves
+ * - Event processing (key reports, layer sync, modifiers, heartbeat)
+ * - WiFi configuration for optimal BLE coexistence (master only)
+ */
+
 #include "espnow.h"
 #include "config.h"
-#include "handler.h"
 #include "kb_matrix.h"
 #include "kb_mgt.h"
 #include "heartbeat.h"
-
-TaskHandle_t espnow_task_hdl = NULL;
-QueueHandle_t espnow_queue;
+#include "utils.h"
 
 static const char *TAG = "ESPNOW";
+
+// =============================================================================
+// STATE VARIABLES
+// =============================================================================
+
+static TaskHandle_t  espnow_task_hdl = NULL;
+static QueueHandle_t espnow_queue    = NULL;
+
+// =============================================================================
+// FORWARD DECLARATIONS
+// =============================================================================
 
 static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int data_len);
 static void espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status);
 static void espnow_task(void *pvParameters);
-void send_to_espnow(espnow_from_t from, espnow_event_info_data_type_t type, void *data);
+
+// =============================================================================
+// PUBLIC API - INITIALIZATION
+// =============================================================================
 
 esp_err_t espnow_init(void) {
   esp_err_t ret;
@@ -88,14 +113,81 @@ esp_err_t espnow_init(void) {
     return ESP_FAIL;
   }
 
-  xTaskCreate(espnow_task, "espnow_task", ESPNOW_TASK_STACK_SIZE, NULL,
-              ESPNOW_PRIORITY, &espnow_task_hdl);
+  task_hdl_init(&espnow_task_hdl, espnow_task, "espnow_task", ESPNOW_PRIORITY, ESPNOW_TASK_STACK_SIZE, NULL);
 
   ESP_LOGI(TAG, "ESP-NOW Initialized!");
   return ret;
 }
 
-void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info,
+// =============================================================================
+// PUBLIC API - MESSAGE TRANSMISSION
+// =============================================================================
+
+void send_to_espnow(espnow_from_t from, espnow_event_info_data_type_t type, void *data) {
+  esp_err_t ret;
+  uint8_t espnow_peer_addr[] = ESPNOW_PEER_ADDR;
+
+  espnow_event_info_data_t *info_data;
+  info_data = malloc(sizeof(espnow_event_info_data_t));
+  if (!info_data) {
+    ESP_LOGE(TAG, "failed to allocate data");
+    return;
+  }
+
+  info_data->from = from;
+  info_data->type = type;
+
+  // Pack data based on message type
+  switch (type) {
+  case CONN:
+    info_data->conn = *(bool *)data;
+    break;
+    
+  case TAP:
+  case BRIEF_TAP:
+    memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
+    break;
+    
+  case CONSUMER:
+    memcpy(&info_data->consumer_report, (kb_mgt_hid_consumer_report_t *)data, sizeof(kb_mgt_hid_consumer_report_t));
+    break;
+    
+  case LAYER_SYNC:
+  case LAYER_DESYNC:
+    info_data->layer = *(uint8_t *)data;
+    break;
+    
+  case MOD_SYNC:
+  case MOD_DESYNC:
+    memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
+    break;
+    
+  case REQ_HEARTBEAT:
+  case RES_HEARTBEAT:
+    // Heartbeat messages have no payload
+    break;
+    
+  default:
+    ESP_LOGW(TAG, "Unknown message type: %d", type);
+    break;
+  }
+
+  ret = esp_now_send(espnow_peer_addr, (uint8_t *)info_data, sizeof(espnow_event_info_data_t));
+  
+  if (info_data) {
+    free(info_data);
+  }
+
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to send data to destination, ret: %d", ret);
+  }
+}
+
+// =============================================================================
+// PRIVATE IMPLEMENTATIONS - ESP-NOW CALLBACKS
+// =============================================================================
+
+static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info,
                     const uint8_t *data, int data_len) {
 
   espnow_event_t event;
@@ -117,7 +209,7 @@ void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info,
   xQueueSend(espnow_queue, &event, portMAX_DELAY);
 }
 
-void espnow_send_cb(const esp_now_send_info_t *tx_info,
+static void espnow_send_cb(const esp_now_send_info_t *tx_info,
                     esp_now_send_status_t status) {
   espnow_event_t event;
   event.type = EVENT_SEND_CB;
@@ -125,161 +217,126 @@ void espnow_send_cb(const esp_now_send_info_t *tx_info,
   espnow_send_cb_t *send_cb = &event.info.send_cb;
 
   memcpy(send_cb->to, tx_info->des_addr, ESP_NOW_ETH_ALEN);
+  
   if (status != ESP_NOW_SEND_SUCCESS) {
-    ESP_LOGE(TAG, "failed to send event to destination, status: %d", status);
+    ESP_LOGE(TAG, "Failed to send event to destination, status: %d", status);
     return;
   }
+  
   send_cb->status = status;
-
   xQueueSend(espnow_queue, &event, portMAX_DELAY);
 }
 
-void espnow_task(void *pvParameters) {
+// =============================================================================
+// PRIVATE IMPLEMENTATIONS - EVENT PROCESSING TASK
+// =============================================================================
+
+static void espnow_task(void *pvParameters) {
   static const char *TAG = "ESPNOW_TASK";
   espnow_event_t event;
 
   while (xQueueReceive(espnow_queue, &event, portMAX_DELAY)) {
     switch (event.type) {
-    case EVENT_RECV_CB:
+    case EVENT_RECV_CB: {
       espnow_recv_cb_t *recv_cb = &event.info.recv_cb;
       espnow_event_info_data_t *data = recv_cb->data;
 
-      ESP_LOGI(TAG, "received data from: %d", data->from);
+      ESP_LOGI(TAG, "Received data from: %d", data->from);
 
 #if !IS_MASTER
-      // NOTE: this is just for updating heartbeat when SLAVE recieve any message
+      // Update heartbeat on any received message (slave only)
       update_heartbeat();
 #endif
 
+      // Process message based on type
       switch (data->type) {
+      // -----------------------------------------------------------------------
+      // SLAVE-ONLY MESSAGE HANDLERS
+      // -----------------------------------------------------------------------
 #if !IS_MASTER
       case CONN:
         if (data->conn) {
           matrix_scan_start();
           heartbeat_start();
-          ESP_LOGI(TAG, "Master connected - slave should show green");
+          ESP_LOGI(TAG, "Master connected - starting scan and heartbeat");
         } else {
           matrix_scan_stop();
           heartbeat_stop();
-          ESP_LOGI(TAG, "Master disconnected - slave should show blue blinking");
+          ESP_LOGI(TAG, "Master disconnected - stopping scan and heartbeat");
         }
         break;
+        
+      case RES_HEARTBEAT:
+        update_heartbeat();
+        ESP_LOGI(TAG, "Heartbeat response received from master");
+        break;
 #endif
+
+      // -----------------------------------------------------------------------
+      // MASTER-ONLY MESSAGE HANDLERS
+      // -----------------------------------------------------------------------
 #if IS_MASTER
       case TAP:
         memcpy(kb_mgt_hid_get_current_report(), &data->key_report, sizeof(kb_mgt_hid_key_report_t));
         kb_mgt_hid_send_report();
         break;
+        
       case BRIEF_TAP:
         memcpy(kb_mgt_hid_get_current_report(), &data->key_report, sizeof(kb_mgt_hid_key_report_t));
         kb_mgt_hid_send_report();
-
         kb_mgt_hid_clear_report();
         kb_mgt_hid_send_report();
         break;
+        
       case CONSUMER:
         memcpy(kb_mgt_hid_get_current_consumer_report(), &data->consumer_report, sizeof(kb_mgt_hid_consumer_report_t));
         kb_mgt_hid_send_consumer_report();
         break;
+        
+      case REQ_HEARTBEAT:
+        send_to_espnow(MASTER, RES_HEARTBEAT, NULL);
+        break;
 #endif
+
+      // -----------------------------------------------------------------------
+      // SHARED MESSAGE HANDLERS (both master and slave)
+      // -----------------------------------------------------------------------
       case LAYER_SYNC:
-        ESP_LOGI(TAG, "layer sync to %d", data->layer);
+        ESP_LOGI(TAG, "Layer sync to %d", data->layer);
         kb_mgt_sync_layer(data->layer);
         break;
+        
       case LAYER_DESYNC:
-        ESP_LOGI(TAG, "layer desync from %d", data->layer);
+        ESP_LOGI(TAG, "Layer desync from %d", data->layer);
         kb_mgt_desync_layer(data->layer);
         break;
+        
       case MOD_SYNC:
         kb_mgt_sync_modifier(data->key_report.modifiers);
         break;
+        
       case MOD_DESYNC:
         kb_mgt_desync_modifier(data->key_report.modifiers);
         break;
-      case REQ_HEARTBEAT:
-#if IS_MASTER
-        send_to_espnow(MASTER, RES_HEARTBEAT, NULL);
-#endif
-        break;
-      case RES_HEARTBEAT:
-#if !IS_MASTER
-        update_heartbeat();
-        ESP_LOGI(TAG, "Heartbeat response received from master");
-#endif
-        break;
+        
       default:
+        ESP_LOGW(TAG, "Unknown message type received: %d", data->type);
         break;
       }
 
-      if (recv_cb->data) free(recv_cb->data);
-      break;
-    case EVENT_SEND_CB:
-      ESP_LOGI(TAG, "sent event to destination!");
-      break;
-    default:
+      if (recv_cb->data) {
+        free(recv_cb->data);
+      }
       break;
     }
-  }
-}
-
-void send_to_espnow(espnow_from_t from, espnow_event_info_data_type_t type, void *data) {
-  esp_err_t ret;
-  uint8_t espnow_peer_addr[] = ESPNOW_PEER_ADDR;
-
-  espnow_event_info_data_t *info_data;
-  info_data = malloc(sizeof(espnow_event_info_data_t));
-  if (!info_data) {
-    ESP_LOGE(TAG, "failed to allocate data");
-    return;
-  }
-
-  info_data->from = from;
-  info_data->type = type;
-
-  switch (type) {
-  case CONN:
-    info_data->conn = *(bool *)data;
-    break;
-  case TAP:
-    memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
-    break;
-  case CONSUMER:
-    memcpy(&info_data->consumer_report, (kb_mgt_hid_consumer_report_t *)data, sizeof(kb_mgt_hid_consumer_report_t));
-    break;
-  case BRIEF_TAP:
-    memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
-    break;
-  case LAYER_SYNC:
-    info_data->layer = *(uint8_t *)data;
-    break;
-  case LAYER_DESYNC:
-    info_data->layer = *(uint8_t *)data;
-    break;
-  case MOD_SYNC:
-    memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
-    break;
-  case MOD_DESYNC:
-    memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
-    break;
-#if !IS_MASTER
-  case REQ_HEARTBEAT:
-    // NOTE: this is just for indicator heartbeat when SLAVE send REQ_HEARTBEAT
-    break;
-#endif
-#if IS_MASTER
-  case RES_HEARTBEAT:
-    // NOTE: this is just for indicator heartbeat when SLAVE recieve response from REQ_HEARTBEAT
-    break;
-#endif
-  default:
-    break;
-  }
-
-  ret = esp_now_send(espnow_peer_addr, (uint8_t *)info_data, sizeof(espnow_event_info_data_t));
-  if (info_data) free(info_data);
-
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "failed to send to data to destination, ret: %d", ret);
-    return;
+    
+    case EVENT_SEND_CB:
+      ESP_LOGI(TAG, "Message sent successfully to destination");
+      break;
+      
+    default:
+      ESP_LOGW(TAG, "Unknown event type: %d", event.type);
+      break;
+    }
   }
 }

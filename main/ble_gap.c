@@ -1,26 +1,60 @@
+/**
+ * @file ble_gap.c
+ * @brief BLE GAP (Generic Access Profile) Manager
+ * 
+ * Manages Bluetooth Low Energy advertising, connection handling, and pairing.
+ * Handles BLE connection lifecycle, security configuration, and advertising parameters.
+ * 
+ * Key responsibilities:
+ * - BLE advertising initialization and management
+ * - GAP event handling (connect, disconnect, pairing)
+ * - Connection parameter updates for low latency
+ * - Security and bonding configuration
+ * - Integration with keyboard matrix and indicators
+ */
+
 #include "ble_gap.h"
 #include "esp_bt.h"
 #include "espnow.h"
-#include "handler.h"
 #include "kb_matrix.h"
 #include "indicator.h"
 
 static const char *TAG = "GAP";
 
 #if CONFIG_BT_NIMBLE_ENABLED
+
+// =============================================================================
+// CONSTANTS AND MACROS
+// =============================================================================
+
 #define GATT_SVR_SVC_HID_UUID 0x1812
+#define SIZEOF_ARRAY(a) (sizeof(a) / sizeof(*a))
 
-static struct ble_hs_adv_fields fields;
-
-static SemaphoreHandle_t bt_hidh_cb_semaphore = NULL;
-#define WAIT_BT_CB() xSemaphoreTake(bt_hidh_cb_semaphore, portMAX_DELAY)
-#define SEND_BT_CB() xSemaphoreGive(bt_hidh_cb_semaphore)
-
-static SemaphoreHandle_t ble_hidh_cb_semaphore = NULL;
+// Semaphore control macros
+#define WAIT_BT_CB()  xSemaphoreTake(bt_hidh_cb_semaphore, portMAX_DELAY)
+#define SEND_BT_CB()  xSemaphoreGive(bt_hidh_cb_semaphore)
 #define WAIT_BLE_CB() xSemaphoreTake(ble_hidh_cb_semaphore, portMAX_DELAY)
 #define SEND_BLE_CB() xSemaphoreGive(ble_hidh_cb_semaphore)
 
-#define SIZEOF_ARRAY(a) (sizeof(a) / sizeof(*a))
+// =============================================================================
+// STATE VARIABLES
+// =============================================================================
+
+static struct ble_hs_adv_fields fields;
+
+static SemaphoreHandle_t bt_hidh_cb_semaphore  = NULL;
+static SemaphoreHandle_t ble_hidh_cb_semaphore = NULL;
+
+// =============================================================================
+// FORWARD DECLARATIONS
+// =============================================================================
+
+static int gap_event_cb(struct ble_gap_event *event, void *arg);
+static esp_err_t init_low_level(uint8_t mode);
+
+// =============================================================================
+// PUBLIC API - ADVERTISING INITIALIZATION
+// =============================================================================
 
 esp_err_t gap_adv_init(uint16_t appearance) {
   ble_uuid16_t *uuid16, *uuid16_1;
@@ -76,6 +110,83 @@ esp_err_t gap_adv_init(uint16_t appearance) {
   return ESP_OK;
 }
 
+// =============================================================================
+// PUBLIC API - ADVERTISING CONTROL
+// =============================================================================
+
+esp_err_t gap_adv_start(void) {
+  int rc;
+  struct ble_gap_adv_params adv_params;
+  int32_t adv_duration_ms = 180000;
+
+  rc = ble_gap_adv_set_fields(&fields);
+  if (rc != 0) {
+    MODLOG_DFLT(ERROR, "error setting advertisement data; rc=%d\n", rc);
+    return rc;
+  }
+
+  /* Begin Advertising */
+  memset(&adv_params, 0, sizeof adv_params);
+  adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
+  adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
+  adv_params.itvl_min = BLE_GAP_ADV_ITVL_MS(30);
+  adv_params.itvl_max = BLE_GAP_ADV_ITVL_MS(50);
+  rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, adv_duration_ms,
+                         &adv_params, gap_event_cb, NULL);
+
+  if (rc != 0) {
+    MODLOG_DFLT(ERROR, "error enabling advertisement; rc=%d\n", rc);
+    return rc;
+  }
+  return rc;
+}
+
+// =============================================================================
+// PUBLIC API - GAP INITIALIZATION
+// =============================================================================
+
+esp_err_t gap_init(uint8_t mode) {
+  esp_err_t ret;
+  if (!mode || mode > ESP_BT_MODE_BTDM) {
+    ESP_LOGE(TAG, "Invalid mode given!");
+    return ESP_FAIL;
+  }
+
+  if (bt_hidh_cb_semaphore != NULL) {
+    ESP_LOGE(TAG, "Already initialised");
+    return ESP_FAIL;
+  }
+
+  bt_hidh_cb_semaphore = xSemaphoreCreateBinary();
+  if (bt_hidh_cb_semaphore == NULL) {
+    ESP_LOGE(TAG, "xSemaphoreCreateMutex failed!");
+    return ESP_FAIL;
+  }
+
+  ble_hidh_cb_semaphore = xSemaphoreCreateBinary();
+  if (ble_hidh_cb_semaphore == NULL) {
+    ESP_LOGE(TAG, "xSemaphoreCreateMutex failed!");
+    vSemaphoreDelete(bt_hidh_cb_semaphore);
+    bt_hidh_cb_semaphore = NULL;
+    return ESP_FAIL;
+  }
+
+  ret = init_low_level(mode);
+  if (ret != ESP_OK) {
+    vSemaphoreDelete(bt_hidh_cb_semaphore);
+    bt_hidh_cb_semaphore = NULL;
+    vSemaphoreDelete(ble_hidh_cb_semaphore);
+    ble_hidh_cb_semaphore = NULL;
+    return ret;
+  }
+
+  return ESP_OK;
+}
+
+// =============================================================================
+// PRIVATE IMPLEMENTATIONS - GAP EVENT HANDLERS
+// =============================================================================
+
 static int gap_event_cb(struct ble_gap_event *event, void *arg) {
   struct ble_gap_conn_desc desc;
   int rc;
@@ -96,9 +207,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
       };
       int rc = ble_gap_update_params(event->connect.conn_handle, &params);
       if (rc != 0) {
-
         ESP_LOGW(TAG, "Failed to request low latency params; rc=%d", rc);
-#endif
       }
       matrix_scan_start();
       bool conn_state = true;
@@ -188,32 +297,9 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
   return 0;
 }
 
-esp_err_t gap_adv_start(void) {
-  int rc;
-  struct ble_gap_adv_params adv_params;
-  int32_t adv_duration_ms = 180000;
-
-  rc = ble_gap_adv_set_fields(&fields);
-  if (rc != 0) {
-    MODLOG_DFLT(ERROR, "error setting advertisement data; rc=%d\n", rc);
-    return rc;
-  }
-
-  /* Begin Advertising */
-  memset(&adv_params, 0, sizeof adv_params);
-  adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
-  adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
-  adv_params.itvl_min = BLE_GAP_ADV_ITVL_MS(30);
-  adv_params.itvl_max = BLE_GAP_ADV_ITVL_MS(50);
-  rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, adv_duration_ms,
-                         &adv_params, gap_event_cb, NULL);
-
-  if (rc != 0) {
-    MODLOG_DFLT(ERROR, "error enabling advertisement; rc=%d\n", rc);
-    return rc;
-  }
-  return rc;
-}
+// =============================================================================
+// PRIVATE IMPLEMENTATIONS - LOW-LEVEL INITIALIZATION
+// =============================================================================
 
 static esp_err_t init_low_level(uint8_t mode) {
   esp_err_t ret;
@@ -245,40 +331,5 @@ static esp_err_t init_low_level(uint8_t mode) {
   return ret;
 }
 
-esp_err_t gap_init(uint8_t mode) {
-  esp_err_t ret;
-  if (!mode || mode > ESP_BT_MODE_BTDM) {
-    ESP_LOGE(TAG, "Invalid mode given!");
-    return ESP_FAIL;
-  }
 
-  if (bt_hidh_cb_semaphore != NULL) {
-    ESP_LOGE(TAG, "Already initialised");
-    return ESP_FAIL;
-  }
-
-  bt_hidh_cb_semaphore = xSemaphoreCreateBinary();
-  if (bt_hidh_cb_semaphore == NULL) {
-    ESP_LOGE(TAG, "xSemaphoreCreateMutex failed!");
-    return ESP_FAIL;
-  }
-
-  ble_hidh_cb_semaphore = xSemaphoreCreateBinary();
-  if (ble_hidh_cb_semaphore == NULL) {
-    ESP_LOGE(TAG, "xSemaphoreCreateMutex failed!");
-    vSemaphoreDelete(bt_hidh_cb_semaphore);
-    bt_hidh_cb_semaphore = NULL;
-    return ESP_FAIL;
-  }
-
-  ret = init_low_level(mode);
-  if (ret != ESP_OK) {
-    vSemaphoreDelete(bt_hidh_cb_semaphore);
-    bt_hidh_cb_semaphore = NULL;
-    vSemaphoreDelete(ble_hidh_cb_semaphore);
-    ble_hidh_cb_semaphore = NULL;
-    return ret;
-  }
-
-  return ESP_OK;
-}
+#endif // CONFIG_BT_NIMBLE_ENABLED

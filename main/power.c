@@ -1,17 +1,46 @@
+/**
+ * @file power.c
+ * @brief Battery and Power Management
+ *
+ * Monitors battery voltage and charging status through ADC readings.
+ * Updates battery indicator based on voltage levels and USB power status.
+ *
+ * Key responsibilities:
+ * - USB-JTAG power detection
+ * - Battery voltage measurement via ADC
+ * - Charging state detection
+ * - Battery level indication (good/low/critical)
+ */
+
 #include "power.h"
 #include "config.h"
 #include "indicator.h"
-#include "handler.h"
-
-TaskHandle_t power_task_hdl = NULL;
+#include "utils.h"
 
 static const char *TAG = "POWER";
 
-power_state_t power_state = {
+// =============================================================================
+// STATE VARIABLES
+// =============================================================================
+
+static TaskHandle_t power_task_hdl = NULL;
+
+static power_state_t power_state = {
   .usb_powered = false,
   .voltage_charging = false,
   .battery_voltage_mv = 0,
 };
+
+// =============================================================================
+// FORWARD DECLARATIONS
+// =============================================================================
+
+static void power_task(void *pvParameters);
+static uint32_t read_battery_voltage(void);
+
+// =============================================================================
+// PUBLIC API - INITIALIZATION
+// =============================================================================
 
 esp_err_t usb_power_init(void) {
   esp_err_t ret;
@@ -23,11 +52,29 @@ esp_err_t usb_power_init(void) {
   }
 
   ESP_LOGI(TAG, "USB-JTAG driver installed");
-
   return ESP_OK;
 }
 
-uint32_t read_battery_voltage(void) {
+// =============================================================================
+// PUBLIC API - TASK CONTROL
+// =============================================================================
+
+void power_task_start(void) {
+  task_hdl_init(&power_task_hdl, power_task, "power_task",
+                POWER_PRIORITY, POWER_TASK_STACK_SIZE, NULL);
+  ESP_LOGI(TAG, "Power monitoring started");
+}
+
+static void power_task_stop(void) {
+  task_hdl_cleanup(power_task_hdl);
+  ESP_LOGI(TAG, "Power monitoring stopped");
+}
+
+// =============================================================================
+// PRIVATE IMPLEMENTATIONS - BATTERY VOLTAGE READING
+// =============================================================================
+
+static uint32_t read_battery_voltage(void) {
   adc_oneshot_unit_handle_t adc1_handle;
 
   adc_oneshot_unit_init_cfg_t init_config1 = {
@@ -43,54 +90,45 @@ uint32_t read_battery_voltage(void) {
 
   int adc_raw;
   ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, BATT_ADC_CHAN, &adc_raw));
-
   ESP_ERROR_CHECK(adc_oneshot_del_unit(adc1_handle));
 
-  // Simple calculation: raw * 3.3V / 4095 * divider
-  // Using integer math to avoid float
+  // Calculate voltage: raw * 3.3V / 4095 * divider ratio
+  // Using integer math to avoid floating point
   uint32_t voltage_mv = (adc_raw * 3300 * BATT_VOLTAGE_DIVIDER) / (4095 * 100);
 
-  ESP_LOGE(TAG, "RAW ADC: %d | Voltage: %lu mV | Divider: %d",
+  ESP_LOGD(TAG, "RAW ADC: %d | Voltage: %lu mV | Divider: %d",
            adc_raw, voltage_mv, BATT_VOLTAGE_DIVIDER);
 
   return voltage_mv;
 }
 
-void power_task_start(void) {
-  if (!power_task_hdl) {
-    xTaskCreate(power_task, "power_task", POWER_TASK_STACK_SIZE, NULL, POWER_PRIORITY, &power_task_hdl);
-  }
-}
+// =============================================================================
+// PRIVATE IMPLEMENTATIONS - POWER MONITORING TASK
+// =============================================================================
 
-void power_task_stop(void) {
-  if (power_task_hdl) {
-    vTaskDelete(power_task_hdl);
-    power_task_hdl = NULL;
-  }
-}
-
-void power_task(void *pvParameters) {
+static void power_task(void *pvParameters) {
   ESP_LOGI(TAG, "Power task started");
 
-while (1) {
-  power_state.usb_powered = usb_serial_jtag_is_connected();
+  while (1) {
+    // Read power status
+    power_state.usb_powered = usb_serial_jtag_is_connected();
     power_state.battery_voltage_mv = read_battery_voltage();
     power_state.voltage_charging = (power_state.battery_voltage_mv > BATT_VOLTAGE_THRESHOLD_MV);
 
-    // Charging if either USB is connected || Voltage not in nominal value
+    // Update battery indicator based on state
     if (power_state.usb_powered || power_state.voltage_charging) {
       indicator_set_batt_state(BATT_STATE_CHARGING);
       ESP_LOGI(TAG, "Charging state detected");
     } else {
       if (power_state.battery_voltage_mv < BATT_VOLTAGE_CRITICAL_MV) {
         indicator_set_batt_state(BATT_STATE_CRITICAL);
-        ESP_LOGI(TAG, "Critical battery voltage detected");
+        ESP_LOGI(TAG, "Critical battery voltage: %lu mV", power_state.battery_voltage_mv);
       } else if (power_state.battery_voltage_mv < BATT_VOLTAGE_NOMINAL_MV) {
         indicator_set_batt_state(BATT_STATE_LOW);
-        ESP_LOGI(TAG, "Low battery voltage detected");
+        ESP_LOGI(TAG, "Low battery voltage: %lu mV", power_state.battery_voltage_mv);
       } else {
         indicator_set_batt_state(BATT_STATE_GOOD);
-        ESP_LOGI(TAG, "Good battery voltage detected");
+        ESP_LOGD(TAG, "Good battery voltage: %lu mV", power_state.battery_voltage_mv);
       }
     }
 

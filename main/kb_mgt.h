@@ -60,32 +60,11 @@ typedef struct {
 // HID MANAGEMENT
 // =============================================================================
 
-// Initialize HID management
-esp_err_t kb_mgt_hid_init(void);
-
 // Get current HID report
 kb_mgt_hid_key_report_t* kb_mgt_hid_get_current_report(void);
 
 // Get current HID(Consumer) report
 kb_mgt_hid_consumer_report_t* kb_mgt_hid_get_current_consumer_report(void);
-
-// Set HID(Consumer) report
-void kb_mgt_hid_set_consumer(uint16_t usage);
-
-// Clear HID(Consumer) report
-void kb_mgt_hid_clear_consumer(void);
-
-// Add key to HID report
-kb_mgt_result_t kb_mgt_hid_add_key(uint8_t keycode);
-
-// Remove key from HID report
-void kb_mgt_hid_remove_key(uint8_t keycode);
-
-// Set modifier in HID report
-void kb_mgt_hid_set_modifier(uint8_t modifier);
-
-// Clear modifier from HID report
-void kb_mgt_hid_clear_modifier(uint8_t modifier);
 
 // Send HID report (only if master)
 void kb_mgt_hid_send_report(void);
@@ -106,26 +85,8 @@ void kb_mgt_desync_modifier(uint8_t modifier);
 // LAYER MANAGEMENT
 // =============================================================================
 
-// Initialize layer management
-esp_err_t kb_mgt_layer_init(void);
-
 // Get current active layer
 uint8_t kb_mgt_layer_get_active(void);
-
-// Set base layer
-void kb_mgt_layer_set_base(uint8_t layer);
-
-// Activate momentary layer
-void kb_mgt_layer_activate_momentary(uint8_t layer);
-
-// Deactivate momentary layer
-void kb_mgt_layer_deactivate_momentary(uint8_t layer);
-
-// Toggle layer
-void kb_mgt_layer_toggle(uint8_t layer);
-
-// Check if layer is momentarily active
-bool kb_mgt_layer_is_momentary_active(uint8_t layer);
 
 // Sync layer activation from remote half
 void kb_mgt_sync_layer(uint8_t layer);
@@ -137,45 +98,8 @@ void kb_mgt_desync_layer(uint8_t layer);
 // KEY PROCESSOR MANAGEMENT
 // =============================================================================
 
-// Initialize key processor
-esp_err_t kb_mgt_processor_init(void);
-
-// Get processor state (for access to timers, etc.)
-kb_mgt_processor_state_t* kb_mgt_processor_get_state(void);
-
-// Process a key press event
-void kb_mgt_processor_handle_press(key_definition_t key, uint8_t row, uint8_t col, uint32_t timestamp);
-
-// Process a key release event
-void kb_mgt_processor_handle_release(uint8_t row, uint8_t col, uint32_t timestamp);
-
 // Check and handle tap timeouts
 void kb_mgt_processor_check_tap_timeouts(uint32_t current_time);
-
-// Store pressed key for release processing
-void kb_mgt_processor_store_pressed_key(uint8_t row, uint8_t col, key_definition_t key);
-
-// Get stored pressed key
-key_definition_t kb_mgt_processor_get_stored_key(uint8_t row, uint8_t col);
-
-// Check if key position has stored key
-bool kb_mgt_processor_has_stored_key(uint8_t row, uint8_t col);
-
-// Clear stored key
-void kb_mgt_processor_clear_stored_key(uint8_t row, uint8_t col);
-
-// =============================================================================
-// COMMUNICATION MANAGEMENT
-// =============================================================================
-
-// Initialize communication management
-esp_err_t kb_mgt_comm_init(void);
-
-// Send communication event to other half
-void kb_mgt_comm_send_event(kb_comm_event_t event_type, void* data);
-
-// Handle brief tap (tap and release immediately)
-void kb_mgt_comm_handle_brief_tap(uint8_t keycode);
 
 // =============================================================================
 // MAIN MANAGEMENT INTERFACE

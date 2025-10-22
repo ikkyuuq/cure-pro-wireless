@@ -4,6 +4,8 @@
 #include "common.h"
 #include "config.h"
 #include "keymap.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 extern esp_hidd_dev_t *hid_dev;
 
@@ -15,11 +17,18 @@ typedef struct {
 } key_event_t;
 
 typedef struct {
-  bool      raw_state[MATRIX_ROW][MATRIX_COL];
-  bool      current_state[MATRIX_ROW][MATRIX_COL];
-  bool      previous_state[MATRIX_ROW][MATRIX_COL];
+  bool      raw[MATRIX_ROW][MATRIX_COL];
+  bool      current[MATRIX_ROW][MATRIX_COL];
+  bool      previous[MATRIX_ROW][MATRIX_COL];
   uint32_t  debounce_time[MATRIX_ROW][MATRIX_COL];
 } matrix_state_t;
+
+typedef struct {
+  bool      raw;
+  bool      current;
+  bool      previous;
+  bool      pressed;
+} mt_state_t;
 
 esp_err_t matrix_init(void);
 void matrix_scan_task(void *pvParameters);

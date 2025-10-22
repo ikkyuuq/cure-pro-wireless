@@ -1,67 +1,107 @@
+/**
+ * @file heartbeat.c
+ * @brief Heartbeat Monitor for Split Keyboard
+ *
+ * Monitors connection health between master and slave keyboard halves.
+ * Sends periodic heartbeat requests and tracks responses to detect disconnections.
+ *
+ * Key responsibilities:
+ * - Periodic heartbeat request transmission (slave to master)
+ * - Response tracking and timeout detection
+ * - Connection state management based on heartbeat health
+ * - Indicator state updates for connection status
+ */
+
 #include "heartbeat.h"
 #include "config.h"
 #include "indicator.h"
+#include "utils.h"
 
-static const char *TAG = "HEARTBEAT";
+static const char TAG[] = "HEARTBEAT";
 
-TaskHandle_t heartbeat_task_hdl = NULL;
+// =============================================================================
+// STATE VARIABLES
+// =============================================================================
 
-heartbeat_state_t heartbeat_state = {0};
+static TaskHandle_t heartbeat_task_hdl = NULL;
+static heartbeat_state_t heartbeat_state = {
+  .received = false,
+  .last_req_time = 0
+};
+
+// =============================================================================
+// FORWARD DECLARATIONS
+// =============================================================================
+
+static void heartbeat_task(void *pvParameters);
+
+// =============================================================================
+// PUBLIC API - TASK CONTROL
+// =============================================================================
 
 void heartbeat_start(void) {
-  if (!heartbeat_task_hdl) {
-    xTaskCreate(heartbeat_task, "heartbeat_task", HEARTBEAT_TASK_STACK_SIZE, NULL, HEARTBEAT_PRIORITY, &heartbeat_task_hdl);
-  }
+  task_hdl_init(&heartbeat_task_hdl, heartbeat_task, "heartbeat_task",
+                HEARTBEAT_PRIORITY, HEARTBEAT_TASK_STACK_SIZE, NULL);
+  ESP_LOGI(TAG, "Heartbeat monitoring started");
 }
 
 void heartbeat_stop(void) {
-  if (heartbeat_task_hdl) {
-    vTaskDelete(heartbeat_task_hdl);
-    heartbeat_task_hdl = NULL;
-  }
+  task_hdl_cleanup(heartbeat_task_hdl);
+  ESP_LOGI(TAG, "Heartbeat monitoring stopped");
 }
 
-void heartbeat_task(void *pvParameters) {
+void update_heartbeat(void) {
+  heartbeat_state.received = true;
+  heartbeat_state.last_req_time = get_current_time_ms();
+  ESP_LOGD(TAG, "Heartbeat response received");
+}
 
+// =============================================================================
+// PRIVATE IMPLEMENTATIONS - HEARTBEAT TASK
+// =============================================================================
+
+static void heartbeat_task(void *pvParameters) {
   ESP_LOGI(TAG, "Heartbeat task started");
 
   while (1) {
-    uint32_t current_time = esp_timer_get_time() / 1000;
+    uint32_t current_time = get_current_time_ms();
 
+    // Send periodic heartbeat requests
     if (current_time - heartbeat_state.last_req_time >= HEARTBEAT_INTERVAL_MS) {
       heartbeat_state.received = false;
       heartbeat_state.last_req_time = current_time;
       send_to_espnow(SLAVE, REQ_HEARTBEAT, NULL);
+      ESP_LOGD(TAG, "Heartbeat request sent");
     }
 
+    // Monitor heartbeat response status
     if (heartbeat_state.received) {
-      if (current_conn_state != CONN_STATE_CONNECTED) {
+      // Heartbeat response received - maintain connected state
+      if (indicator_get_conn_state() != CONN_STATE_CONNECTED) {
         indicator_set_conn_state(CONN_STATE_CONNECTED);
       }
     } else {
-      // Check if it sent a heartbeat request recently
+      // No heartbeat response - check timeout conditions
       if (heartbeat_state.last_req_time > 0) {
         uint32_t time_since_req = current_time - heartbeat_state.last_req_time;
 
-        // Immediate waiting state if no response yet (after 1 second wait for stable tranmission) and still connected
-        if (time_since_req > HEARTBEAT_STABLE_MS && current_conn_state == CONN_STATE_CONNECTED) {
+        // Transition to waiting state after stable transmission period
+        if (time_since_req > HEARTBEAT_STABLE_MS &&
+            indicator_get_conn_state() == CONN_STATE_CONNECTED) {
           indicator_set_conn_state(CONN_STATE_WAITING);
-          ESP_LOGI(TAG, "Master not responding - slave should show blue blinking");
+          ESP_LOGI(TAG, "Master not responding - entering waiting state");
         }
 
-        // After 10 seconds of no response, go to sleep mode
-        if (time_since_req > (HEARTBEAT_TIMEOUT_MS + HEARTBEAT_STABLE_MS) && current_conn_state == CONN_STATE_WAITING) {
+        // Transition to sleeping state after full timeout
+        if (time_since_req > (HEARTBEAT_TIMEOUT_MS + HEARTBEAT_STABLE_MS) &&
+            indicator_get_conn_state() == CONN_STATE_WAITING) {
           indicator_set_conn_state(CONN_STATE_SLEEPING);
-          ESP_LOGI(TAG, "Master not responding - slave should show off");
+          ESP_LOGI(TAG, "Master timeout - entering sleep state");
+          // TODO: Implement deep sleep mode
         }
       }
     }
 
     vTaskDelay(pdMS_TO_TICKS(500));
   }
-}
-
-void update_heartbeat(void) {
-  heartbeat_state.received = true;
-  heartbeat_state.last_req_time = esp_timer_get_time() / 1000;
 }
