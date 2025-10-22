@@ -2,21 +2,28 @@
 #include "config.h"
 #include "espnow.h"
 #include "handler.h"
+#include "keymap.h"
 
 static const char *TAG = "KB_MGT";
 
-static kb_mgt_hid_report_t current_hid_report;
-static kb_mgt_processor_state_t processor_state;
+static kb_mgt_hid_key_report_t            current_hid_report;
+static kb_mgt_hid_consumer_report_t   current_hid_consumer_report;
+static kb_mgt_processor_state_t       processor_state;
 
 esp_err_t kb_mgt_hid_init(void) {
-  memset(&current_hid_report, 0, sizeof(kb_mgt_hid_report_t));
+  memset(&current_hid_report, 0, sizeof(kb_mgt_hid_key_report_t));
+  memset(&current_hid_consumer_report, 0, sizeof(kb_mgt_hid_consumer_report_t));
 
   ESP_LOGI(TAG, "HID management initialized");
   return ESP_OK;
 }
 
-kb_mgt_hid_report_t* kb_mgt_hid_get_current_report(void) {
+kb_mgt_hid_key_report_t* kb_mgt_hid_get_current_report(void) {
   return &current_hid_report;
+}
+
+kb_mgt_hid_consumer_report_t* kb_mgt_hid_get_current_consumer_report(void) {
+  return &current_hid_consumer_report;
 }
 
 kb_mgt_result_t kb_mgt_hid_add_key(uint8_t keycode) {
@@ -46,6 +53,14 @@ void kb_mgt_hid_remove_key(uint8_t keycode) {
   }
 }
 
+void kb_mgt_hid_set_consumer(uint16_t usage) {
+  current_hid_consumer_report.usage = usage;
+}
+
+void kb_mgt_hid_clear_consumer(void) {
+  current_hid_consumer_report.usage = 0;
+}
+
 void kb_mgt_hid_set_modifier(uint8_t modifier) {
   current_hid_report.modifiers |= modifier;
 }
@@ -55,9 +70,26 @@ void kb_mgt_hid_clear_modifier(uint8_t modifier) {
 }
 
 #if IS_MASTER
+void kb_mgt_hid_send_consumer_report(void) {
+  if (hid_dev) {
+    ESP_LOGI(TAG, "Sending consumer report: usage=0x%04X", current_hid_consumer_report.usage);
+    esp_err_t ret = esp_hidd_dev_input_set(hid_dev, 0, 2, (uint8_t *)&current_hid_consumer_report, sizeof(kb_mgt_hid_consumer_report_t));
+    if (ret != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to send consumer report: %d", ret);
+    }
+  }
+}
+#else
+void kb_mgt_hid_send_consumer_report(void) {
+  // For slave, this would send via ESP-NOW to master
+  kb_mgt_comm_send_event(KB_COMM_EVENT_CONSUMER, &current_hid_consumer_report);
+}
+#endif
+
+#if IS_MASTER
 void kb_mgt_hid_send_report(void) {
   if (hid_dev) {
-    esp_hidd_dev_input_set(hid_dev, 0, 1, (uint8_t *)&current_hid_report, sizeof(kb_mgt_hid_report_t));
+    esp_hidd_dev_input_set(hid_dev, 0, 1, (uint8_t *)&current_hid_report, sizeof(kb_mgt_hid_key_report_t));
   }
 }
 #else
@@ -68,7 +100,7 @@ void kb_mgt_hid_send_report(void) {
 #endif
 
 void kb_mgt_hid_clear_report(void) {
-  memset(&current_hid_report, 0, sizeof(kb_mgt_hid_report_t));
+  memset(&current_hid_report, 0, sizeof(kb_mgt_hid_key_report_t));
 }
 
 void kb_mgt_sync_modifier(uint8_t modifier) {
@@ -128,7 +160,7 @@ void kb_mgt_layer_deactivate_momentary(uint8_t layer) {
 void kb_mgt_layer_toggle(uint8_t layer) {
   if (layer < MAX_LAYERS) {
     processor_state.current_layer = (processor_state.current_layer == layer) ? DEFAULT_LAYER : layer;
-#if !IS_MASTER 
+#if !IS_MASTER
     kb_mgt_comm_send_event(KB_COMM_EVENT_LAYER_SYNC, &processor_state.current_layer);
 #endif
 
@@ -167,9 +199,50 @@ kb_mgt_processor_state_t* kb_mgt_processor_get_state(void) {
 void kb_mgt_processor_handle_press(key_definition_t key, uint8_t row, uint8_t col, uint32_t timestamp) {
   ESP_LOGD(TAG, "Processing key press at [%d:%d], type=%d", row, col, key.type);
 
+  // TAP-PREFERRED: Check for pending tap-hold keys and resolve them as TAP when another key is pressed
+  for (uint8_t r = 0; r < MATRIX_ROW; r++) {
+    for (uint8_t c = 0; c < MATRIX_COL; c++) {
+      if (!processor_state.pressed_key_active[r][c]) continue;
+      if (r == row && c == col) continue;
+
+      uint16_t timeout_ms = processor_state.key_tap_timeout[r][c];
+      if (timeout_ms == 0) timeout_ms = DEFAULT_TIMEOUT_MS;
+
+      key_definition_t held_key = processor_state.pressed_keys[r][c];
+      bool already_resolved = processor_state.key_is_tapped[r][c];
+
+      if (already_resolved) continue;
+
+      // LayerTap: send tap key immediately when another key is pressed
+      if (held_key.type == KEY_TYPE_LAYER_TAP) {
+        uint32_t held_time = timestamp - processor_state.layer_tap_timer[r][c];
+        if (held_time < timeout_ms) {
+          kb_mgt_hid_add_key(held_key.layer_tap.tap_key);
+          processor_state.key_is_tapped[r][c] = true;
+          ESP_LOGD(TAG, "LayerTap resolved as TAP at [%d:%d]", r, c);
+        }
+      }
+
+      // ModTap: send tap key immediately when another key is pressed
+      if (held_key.type == KEY_TYPE_MOD_TAP) {
+        uint32_t held_time = timestamp - processor_state.mod_tap_timer[r][c];
+        if (held_time < timeout_ms) {
+          kb_mgt_hid_add_key(held_key.mod_tap.tap_key);
+          processor_state.key_is_tapped[r][c] = true;
+          ESP_LOGD(TAG, "ModTap resolved as TAP at [%d:%d]", r, c);
+        }
+      }
+    }
+  }
+
   switch (key.type) {
     case KEY_TYPE_NORMAL:
       kb_mgt_hid_add_key(key.keycode);
+      break;
+
+    case KEY_TYPE_CONSUMER:
+      kb_mgt_hid_set_consumer(key.consumer);
+      kb_mgt_hid_send_consumer_report();
       break;
 
     case KEY_TYPE_MODIFIER:
@@ -199,11 +272,6 @@ void kb_mgt_processor_handle_press(key_definition_t key, uint8_t row, uint8_t co
       kb_mgt_layer_toggle(key.layer);
       break;
 
-    case KEY_TYPE_CONSUMER:
-
-      ESP_LOGD(TAG, "Consumer key: 0x%04x", key.consumer);
-      break;
-
     case KEY_TYPE_TRANSPARENT:
       // Handle transparent key by checking lower layers
       for (int layer = kb_mgt_layer_get_active() - 1; layer >= 0; layer--) {
@@ -231,6 +299,9 @@ void kb_mgt_processor_handle_release(uint8_t row, uint8_t col, uint32_t timestam
     return;
   }
 
+  uint16_t timeout_ms = processor_state.key_tap_timeout[row][col];
+  if (timeout_ms == 0) timeout_ms = DEFAULT_TIMEOUT_MS;
+
   key_definition_t stored_key = kb_mgt_processor_get_stored_key(row, col);
 
   ESP_LOGD(TAG, "Processing key release at [%d:%d], type=%d", row, col, stored_key.type);
@@ -238,6 +309,11 @@ void kb_mgt_processor_handle_release(uint8_t row, uint8_t col, uint32_t timestam
   switch (stored_key.type) {
     case KEY_TYPE_NORMAL:
       kb_mgt_hid_remove_key(stored_key.keycode);
+      break;
+
+    case KEY_TYPE_CONSUMER:
+      kb_mgt_hid_clear_consumer();
+      kb_mgt_hid_send_consumer_report();  // Send clear immediately to release the key
       break;
 
     case KEY_TYPE_MODIFIER:
@@ -249,31 +325,51 @@ void kb_mgt_processor_handle_release(uint8_t row, uint8_t col, uint32_t timestam
       kb_mgt_hid_remove_key(stored_key.keycode);
       break;
 
-    case KEY_TYPE_LAYER_TAP:
-      uint32_t layer_tap_hold_time = timestamp - processor_state.layer_tap_timer[row][col];
+    case KEY_TYPE_LAYER_TAP: {
       bool is_tapped = processor_state.key_is_tapped[row][col];
+      bool layer_is_active = kb_mgt_layer_is_momentary_active(stored_key.layer_tap.layer);
+      uint32_t layer_tap_hold_time = timestamp - processor_state.layer_tap_timer[row][col];
 
-      if (layer_tap_hold_time < TAP_TIMEOUT_MS && !is_tapped) {
-        // It was a tap - send the tap key
-        kb_mgt_comm_handle_brief_tap(stored_key.layer_tap.tap_key);
-      } else {
-        // It was a hold - deactivate the layer
+      // If tap-preferred sent the tap key, remove it from report
+      if (is_tapped && !layer_is_active) {
+        kb_mgt_hid_remove_key(stored_key.layer_tap.tap_key);
+      }
+
+      // ALWAYS deactivate layer if it was activated (by timeout)
+      if (layer_is_active) {
         kb_mgt_layer_deactivate_momentary(stored_key.layer_tap.layer);
         kb_mgt_comm_send_event(KB_COMM_EVENT_LAYER_DESYNC, &stored_key.layer_tap.layer);
       }
-      break;
 
-    case KEY_TYPE_MOD_TAP:
+      // If quick tap without layer activation and wasn't tap-preferred, send brief tap
+      if (!is_tapped && !layer_is_active && layer_tap_hold_time < timeout_ms) {
+        kb_mgt_comm_handle_brief_tap(stored_key.layer_tap.tap_key);
+      }
+      break;
+    }
+
+    case KEY_TYPE_MOD_TAP: {
+      bool is_tapped = processor_state.key_is_tapped[row][col];
       uint32_t mod_tap_hold_time = timestamp - processor_state.mod_tap_timer[row][col];
-      if (mod_tap_hold_time < TAP_TIMEOUT_MS && !processor_state.key_is_tapped[row][col]) {
-        // It was a tap - send the tap key
-        kb_mgt_comm_handle_brief_tap(stored_key.mod_tap.tap_key);
-      } else {
-        // It was a hold - remove the modifier
+      bool mod_is_active = (current_hid_report.modifiers & stored_key.mod_tap.hold_key) != 0;
+
+      // If tap-preferred sent the tap key, remove it from report
+      if (is_tapped && !mod_is_active) {
+        kb_mgt_hid_remove_key(stored_key.mod_tap.tap_key);
+      }
+
+      // ALWAYS clear modifier if it was activated (by timeout)
+      if (mod_is_active) {
         kb_mgt_hid_clear_modifier(stored_key.mod_tap.hold_key);
         kb_mgt_comm_send_event(KB_COMM_EVENT_MOD_DESYNC, &stored_key.mod_tap.hold_key);
       }
+
+      // If quick tap without modifier activation and wasn't tap-preferred, send brief tap
+      if (!is_tapped && !mod_is_active && mod_tap_hold_time < timeout_ms) {
+        kb_mgt_comm_handle_brief_tap(stored_key.mod_tap.tap_key);
+      }
       break;
+    }
 
     case KEY_TYPE_LAYER_MOMENTARY:
       kb_mgt_layer_deactivate_momentary(stored_key.layer);
@@ -303,9 +399,16 @@ void kb_mgt_processor_check_tap_timeouts(uint32_t current_time) {
       if (!processor_state.pressed_key_active[row][col]) continue;
 
       key_definition_t key = processor_state.pressed_keys[row][col];
-      bool layer_tap_elapsed = (current_time - processor_state.layer_tap_timer[row][col]) >= TAP_TIMEOUT_MS;
-      bool mod_tap_elapsed = (current_time - processor_state.mod_tap_timer[row][col]) >= TAP_TIMEOUT_MS;
       bool is_tapped = processor_state.key_is_tapped[row][col];
+
+      // Get the per-key timeout (fallback to default if 0)
+      uint16_t timeout_ms = processor_state.key_tap_timeout[row][col];
+      if (timeout_ms == 0) {
+        timeout_ms = DEFAULT_TIMEOUT_MS;
+      }
+
+      bool layer_tap_elapsed = (current_time - processor_state.layer_tap_timer[row][col]) >= timeout_ms;
+      bool mod_tap_elapsed = (current_time - processor_state.mod_tap_timer[row][col]) >= timeout_ms;
 
       switch (key.type) {
         case KEY_TYPE_LAYER_TAP:
@@ -314,7 +417,7 @@ void kb_mgt_processor_check_tap_timeouts(uint32_t current_time) {
             processor_state.key_is_tapped[row][col] = true;
             kb_mgt_comm_send_event(KB_COMM_EVENT_LAYER_SYNC, &key.layer_tap.layer);
 
-            ESP_LOGD(TAG, "Layer tap timeout - activating layer %d", key.layer_tap.layer);
+            ESP_LOGD(TAG, "Layer tap timeout (%dms) - activating layer %d", timeout_ms, key.layer_tap.layer);
           }
           break;
 
@@ -324,7 +427,7 @@ void kb_mgt_processor_check_tap_timeouts(uint32_t current_time) {
             processor_state.key_is_tapped[row][col] = true;
             kb_mgt_comm_send_event(KB_COMM_EVENT_MOD_SYNC, &key.mod_tap.hold_key);
 
-            ESP_LOGD(TAG, "Mod tap timeout - activating modifier 0x%02x", key.mod_tap.hold_key);
+            ESP_LOGD(TAG, "Mod tap timeout (%dms) - activating modifier 0x%02x", timeout_ms, key.mod_tap.hold_key);
           }
           break;
 
@@ -413,6 +516,14 @@ void kb_mgt_comm_send_event(kb_comm_event_t event_type, void* data) {
     send_to_espnow(MASTER, MOD_DESYNC, data);
 #else
     send_to_espnow(SLAVE, MOD_DESYNC, data);
+#endif
+    break;
+
+    case KB_COMM_EVENT_CONSUMER:
+#if IS_MASTER
+    send_to_espnow(MASTER, CONSUMER, data);
+#else
+    send_to_espnow(SLAVE, CONSUMER, data);
 #endif
     break;
   }

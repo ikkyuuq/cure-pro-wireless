@@ -5,21 +5,22 @@
 
 // Key type definitions
 typedef enum {
-    KEY_TYPE_NORMAL = 0,    // Normal key press
-    KEY_TYPE_MODIFIER,      // Modifier key (ctrl, shift, etc.)
-    KEY_TYPE_LAYER_TAP,     // Layer tap (hold for layer, tap for key)
-    KEY_TYPE_MOD_TAP,       // Mod tap (hold for modifier, tap for key)
-    KEY_TYPE_LAYER_TOGGLE,  // Layer toggle
-    KEY_TYPE_LAYER_MOMENTARY, // Layer momentary
-    KEY_TYPE_CONSUMER,      // Media/consumer key
-    KEY_TYPE_MACRO,         // Custom macro
-    KEY_TYPE_TRANSPARENT,   // Transparent key (use lower layer)
-    KEY_TYPE_SHIFTED        // Key with shift modifier automatically applied
+    KEY_TYPE_NORMAL,
+    KEY_TYPE_MODIFIER,
+    KEY_TYPE_SHIFTED,
+    KEY_TYPE_LAYER_TAP,
+    KEY_TYPE_MOD_TAP,
+    KEY_TYPE_LAYER_MOMENTARY,
+    KEY_TYPE_LAYER_TOGGLE,
+    KEY_TYPE_CONSUMER,
+    KEY_TYPE_MACRO,
+    KEY_TYPE_TRANSPARENT
 } key_type_t;
 
 // Key definition structure
 typedef struct {
     key_type_t type;
+
     union {
         uint8_t keycode;        // For normal keys
         uint8_t modifier;       // For modifier keys
@@ -27,10 +28,12 @@ typedef struct {
         struct {
             uint8_t tap_key;
             uint8_t hold_key;
+            uint16_t tap_timeout_ms;  // 0 = use default TAP_TIMEOUT_MS
         } mod_tap;
         struct {
             uint8_t tap_key;
             uint8_t layer;
+            uint16_t tap_timeout_ms;  // 0 = use default TAP_TIMEOUT_MS
         } layer_tap;
         uint8_t layer;          // For layer keys
         uint8_t macro_id;       // For macros
@@ -192,52 +195,45 @@ typedef struct {
 #define KC_KP_DOT       HID_KEY_KPDOT
 
 // Media keys
+#define KC_BRIGHTNESS_UP        HID_CONSUMER_BRIGHTNESS_UP
+#define KC_BRIGHTNESS_DOWN      HID_CONSUMER_BRIGHTNESS_DOWN
+
+#define KC_MEDIA_PLAY           HID_CONSUMER_PLAY
+#define KC_MEDIA_PAUSE          HID_CONSUMER_PAUSE
 #define KC_MEDIA_PLAY_PAUSE     HID_CONSUMER_PLAY_PAUSE
+#define KC_MEDIA_RECORD         HID_CONSUMER_RECORD
+#define KC_MEDIA_FAST_FORWARD   HID_CONSUMER_FAST_FORWARD
+#define KC_MEDIA_REWIND         HID_CONSUMER_REWIND
 #define KC_MEDIA_NEXT_TRACK     HID_CONSUMER_SCAN_NEXT
 #define KC_MEDIA_PREV_TRACK     HID_CONSUMER_SCAN_PREV
 #define KC_MEDIA_STOP           HID_CONSUMER_STOP
+#define KC_MEDIA_EJECT          HID_CONSUMER_EJECT
+
+#define KC_AUDIO_MUTE           HID_CONSUMER_MUTE
+#define KC_AUDIO_BASS_BOOST     HID_CONSUMER_BASS_BOOST
+#define KC_AUDIO_LOUDNESS       HID_CONSUMER_LOUDNESS
 #define KC_AUDIO_VOL_UP         HID_CONSUMER_VOLUME_UP
 #define KC_AUDIO_VOL_DOWN       HID_CONSUMER_VOLUME_DOWN
-#define KC_AUDIO_MUTE           HID_CONSUMER_MUTE
-
-// Shifted symbol keys (actual symbols, not numbers)
-#define KC_EXCL         HID_KEY_EXCLAMATION     // !
-#define KC_AT           HID_KEY_AT              // @
-#define KC_HASH         HID_KEY_HASH            // #
-#define KC_DLR          HID_KEY_DOLLAR          // $
-#define KC_PERC         HID_KEY_PERCENT         // %
-#define KC_CIRC         HID_KEY_CARET           // ^
-#define KC_AMPR         HID_KEY_AMPERSAND       // &
-#define KC_ASTR         HID_KEY_ASTERISK        // *
-#define KC_LPRN         HID_KEY_LPAREN          // (
-#define KC_RPRN         HID_KEY_RPAREN          // )
-#define KC_UNDS         HID_KEY_UNDERSCORE      // _
-#define KC_PLUS         HID_KEY_PLUS            // +
-#define KC_LCBR         HID_KEY_LCBRACE         // {
-#define KC_RCBR         HID_KEY_RCBRACE         // }
-#define KC_PIPE         HID_KEY_PIPE            // |
-#define KC_COLN         HID_KEY_COLON           // :
-#define KC_DQUO         HID_KEY_DQUOTE          // "
-#define KC_TILD         HID_KEY_TILDE           // ~
-#define KC_LABK         HID_KEY_LESS            // <
-#define KC_RABK         HID_KEY_GREATER         // >
-#define KC_QUES         HID_KEY_QUESTION        // ?
 
 // Macro functions for creating complex key definitions
-#define NORM_KEY(k)             ((key_definition_t){.type = KEY_TYPE_NORMAL, .keycode = (k)})
-#define MOD_KEY(m)              ((key_definition_t){.type = KEY_TYPE_MODIFIER, .modifier = (m)})
-#define LAYER_TAP(tap, layer)   ((key_definition_t){.type = KEY_TYPE_LAYER_TAP, .layer_tap = {(tap), (layer)}})
-#define MOD_TAP(tap, mod)       ((key_definition_t){.type = KEY_TYPE_MOD_TAP, .mod_tap = {(tap), (mod)}})
-#define LAYER_TOG(layer)        ((key_definition_t){.type = KEY_TYPE_LAYER_TOGGLE, .layer = (layer)})
-#define LAYER_MOM(layer)        ((key_definition_t){.type = KEY_TYPE_LAYER_MOMENTARY, .layer = (layer)})
-#define CONS_KEY(k)             ((key_definition_t){.type = KEY_TYPE_CONSUMER, .consumer = (k)})
-#define MACRO_KEY(id)           ((key_definition_t){.type = KEY_TYPE_MACRO, .macro_id = (id)})
-#define TRANS_KEY()             ((key_definition_t){.type = KEY_TYPE_TRANSPARENT, .keycode = KC_TRNS})
-#define SHIFT_KEY(k)            ((key_definition_t){.type = KEY_TYPE_SHIFTED, .keycode = (k)})
+#define NORM_KEY(k)             ((key_definition_t){.type = KEY_TYPE_NORMAL,            .keycode = (k)})
+#define MOD_KEY(m)              ((key_definition_t){.type = KEY_TYPE_MODIFIER,          .modifier = (m)})
+#define LAYER_TAP(t, l)         ((key_definition_t){.type = KEY_TYPE_LAYER_TAP,         .layer_tap = {(t), (l), 0}})
+#define MOD_TAP(t, m)           ((key_definition_t){.type = KEY_TYPE_MOD_TAP,           .mod_tap = {(t), (m), 0}})
+#define LAYER_TAP_TO(t, l, to)  ((key_definition_t){.type = KEY_TYPE_LAYER_TAP,         .layer_tap = {(t), (l), (to)}})
+#define MOD_TAP_TO(t, m, to)    ((key_definition_t){.type = KEY_TYPE_MOD_TAP,           .mod_tap = {(t), (m), (to)}})
+#define LAYER_TOG(l)            ((key_definition_t){.type = KEY_TYPE_LAYER_TOGGLE,      .layer = (l)})
+#define LAYER_MOM(l)            ((key_definition_t){.type = KEY_TYPE_LAYER_MOMENTARY,   .layer = (l)})
+#define CONS_KEY(k)             ((key_definition_t){.type = KEY_TYPE_CONSUMER,          .consumer = (k)})
+#define MACRO_KEY(id)           ((key_definition_t){.type = KEY_TYPE_MACRO,             .macro_id = (id)})
+#define TRANS_KEY()             ((key_definition_t){.type = KEY_TYPE_TRANSPARENT,       .keycode = KC_TRNS})
+#define SHIFT_KEY(k)            ((key_definition_t){.type = KEY_TYPE_SHIFTED,           .keycode = (k)})
 
 // Convenient shortcuts
 #define LT(layer, tap)          LAYER_TAP(tap, layer)
 #define MT(mod, tap)            MOD_TAP(tap, mod)
+#define LT_TO(layer, tap, to)   LAYER_TAP_TO(tap, layer, to)
+#define MT_TO(mod, tap, to)     MOD_TAP_TO(tap, mod, to)
 #define TO(layer)               LAYER_TOG(layer)
 #define MO(layer)               LAYER_MOM(layer)
 

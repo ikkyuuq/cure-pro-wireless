@@ -27,19 +27,19 @@ esp_err_t indicator_init(void) {
   led_strip_config_t connection_cfg = {
       .strip_gpio_num = CONN_LED_GPIO,
       .max_leds = 1,
-      .led_model = LED_MODEL_WS2812,
+      .led_model = LED_MODEL_SK6812,
       .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
       .flags = {.invert_out = false}};
 
-  // Battery LED configuration (GPIO 15)
-  // led_strip_config_t battery_cfg = {
-  //     .strip_gpio_num = GPIO_NUM_15,
-  //     .max_leds = 1,
-  //     .led_model = LED_MODEL_WS2812,
-  //     .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
-  //     .flags = {.invert_out = false}};
+  // Battery LED configuration (GPIO 7)
+  led_strip_config_t battery_cfg = {
+      .strip_gpio_num = BATT_LED_GPIO,
+      .max_leds = 1,
+      .led_model = LED_MODEL_SK6812,
+      .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
+      .flags = {.invert_out = false}};
 
-  // RMT backend configuration
+  // RMT backend configuration for connection LED
   led_strip_rmt_config_t rmt_config = {
       .clk_src = RMT_CLK_SRC_DEFAULT,
       .resolution_hz = 10 * 1000 * 1000, // 10MHz
@@ -52,20 +52,23 @@ esp_err_t indicator_init(void) {
     return ret;
   }
 
-//   ret = led_strip_new_rmt_device(&battery_cfg, &rmt_config, &batt_indicator_hdl);
-//   if (ret != ESP_OK) {
-// 
-//     ESP_LOGE(TAG, "Failed to create battery LED strip: %s", esp_err_to_name(ret));
-// #endif
-//     return ret;
-//   }
+  // SPI backend configuration for battery LED (to avoid RMT channel exhaustion)
+  led_strip_spi_config_t spi_config = {
+      .clk_src = SPI_CLK_SRC_DEFAULT,
+      .spi_bus = SPI2_HOST,
+      .flags = {.with_dma = false}};
 
-  // Clear both LEDs initially
+  ret = led_strip_new_spi_device(&battery_cfg, &spi_config, &batt_indicator_hdl);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to create battery LED strip: %s", esp_err_to_name(ret));
+    return ret;
+  }
+
   led_strip_clear(conn_indicator_hdl);
-  // led_strip_clear(batt_indicator_hdl);
+  led_strip_clear(batt_indicator_hdl);
 
   led_strip_refresh(conn_indicator_hdl);
-  // led_strip_refresh(batt_indicator_hdl);
+  led_strip_refresh(batt_indicator_hdl);
 
   xTaskCreate(indicator_task, "indicator_task", 4096, NULL, INDICATOR_PRIORITY, &indicator_task_hdl);
 
@@ -180,8 +183,6 @@ void indicator_set_batt_state(batt_state_t state) {
 void indicator_task(void *pvParameters) {
   bool blink_state = false;
   uint32_t last_blink_time = 0;
-
-  ESP_LOGI(TAG, "Indicator wrapper task started");
 
   while (1) {
     uint32_t current_time = esp_timer_get_time() / 1000;

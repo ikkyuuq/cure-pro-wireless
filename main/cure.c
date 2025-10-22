@@ -1,8 +1,8 @@
 #include "ble_gap.h"
 #include "espnow.h"
 #include "hid_gatt_svr_svc.h"
-#include "kb_matrix.h"
 #include "indicator.h"
+#include "kb_matrix.h"
 #include "power.h"
 
 extern const gpio_num_t row_pins[MATRIX_ROW];
@@ -62,7 +62,7 @@ void app_main(void) {
 
   ret = gap_adv_start();
   ESP_ERROR_CHECK(ret);
-#endif  // IS_MASTER
+#endif // IS_MASTER
 
   ret = matrix_init();
   ESP_ERROR_CHECK(ret);
@@ -70,10 +70,10 @@ void app_main(void) {
   ret = usb_power_init();
   ESP_ERROR_CHECK(ret);
 
-  power_task_start();
-
   ret = indicator_init();
   ESP_ERROR_CHECK(ret);
+
+  power_task_start();
 
   ESP_LOGI(TAG, "System initialized successfully");
 }

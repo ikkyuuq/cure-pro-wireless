@@ -29,6 +29,7 @@ esp_err_t usb_power_init(void) {
 
 uint32_t read_battery_voltage(void) {
   adc_oneshot_unit_handle_t adc1_handle;
+
   adc_oneshot_unit_init_cfg_t init_config1 = {
     .unit_id = ADC_UNIT_1,
   };
@@ -45,9 +46,12 @@ uint32_t read_battery_voltage(void) {
 
   ESP_ERROR_CHECK(adc_oneshot_del_unit(adc1_handle));
 
-  uint32_t voltage_mv = (adc_raw * 3300 * 2) / 4095;
+  // Simple calculation: raw * 3.3V / 4095 * divider
+  // Using integer math to avoid float
+  uint32_t voltage_mv = (adc_raw * 3300 * BATT_VOLTAGE_DIVIDER) / (4095 * 100);
 
-  ESP_LOGD(TAG, "Battery voltage: %lu mV (ADC: %d)", voltage_mv, adc_raw);
+  ESP_LOGE(TAG, "RAW ADC: %d | Voltage: %lu mV | Divider: %d",
+           adc_raw, voltage_mv, BATT_VOLTAGE_DIVIDER);
 
   return voltage_mv;
 }
@@ -68,8 +72,8 @@ void power_task_stop(void) {
 void power_task(void *pvParameters) {
   ESP_LOGI(TAG, "Power task started");
 
-  while (1) {
-    power_state.usb_powered = usb_serial_jtag_is_connected();
+while (1) {
+  power_state.usb_powered = usb_serial_jtag_is_connected();
     power_state.battery_voltage_mv = read_battery_voltage();
     power_state.voltage_charging = (power_state.battery_voltage_mv > BATT_VOLTAGE_THRESHOLD_MV);
 

@@ -90,7 +90,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
     if (event->connect.status == 0) {
       struct ble_gap_upd_params params = {
         .itvl_min = 6,
-        .itvl_max = 6,
+        .itvl_max = 9,
         .latency = 0,
         .supervision_timeout = 100
       };
@@ -152,7 +152,10 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
     MODLOG_DFLT(INFO, "encryption change event; status=%d ",
                 event->enc_change.status);
     rc = ble_gap_conn_find(event->enc_change.conn_handle, &desc);
-    assert(rc == 0);
+    if (rc != 0) {
+      ESP_LOGW(TAG, "Connection not found in enc_change event; rc=%d", rc);
+      return 0;
+    }
     return 0;
 
   case BLE_GAP_EVENT_NOTIFY_TX:
@@ -171,8 +174,11 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
 
     /* Delete the old bond. */
     rc = ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc);
-    assert(rc == 0);
-    // ble_store_util_delete_peer(&desc.peer_id_addr);
+    if (rc != 0) {
+      ESP_LOGW(TAG, "Connection not found in repeat_pairing event; rc=%d", rc);
+      return BLE_GAP_REPEAT_PAIRING_RETRY;
+    }
+    ble_store_util_delete_peer(&desc.peer_id_addr);
 
     /* Return BLE_GAP_REPEAT_PAIRING_RETRY to indicate that the host should
      * continue with the pairing operation.

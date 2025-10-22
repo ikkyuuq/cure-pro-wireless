@@ -167,15 +167,19 @@ void espnow_task(void *pvParameters) {
 #endif
 #if IS_MASTER
       case TAP:
-        memcpy(kb_mgt_hid_get_current_report(), &data->report, sizeof(kb_mgt_hid_report_t));
+        memcpy(kb_mgt_hid_get_current_report(), &data->key_report, sizeof(kb_mgt_hid_key_report_t));
         kb_mgt_hid_send_report();
         break;
       case BRIEF_TAP:
-        memcpy(kb_mgt_hid_get_current_report(), &data->report, sizeof(kb_mgt_hid_report_t));
+        memcpy(kb_mgt_hid_get_current_report(), &data->key_report, sizeof(kb_mgt_hid_key_report_t));
         kb_mgt_hid_send_report();
 
         kb_mgt_hid_clear_report();
         kb_mgt_hid_send_report();
+        break;
+      case CONSUMER:
+        memcpy(kb_mgt_hid_get_current_consumer_report(), &data->consumer_report, sizeof(kb_mgt_hid_consumer_report_t));
+        kb_mgt_hid_send_consumer_report();
         break;
 #endif
       case LAYER_SYNC:
@@ -187,10 +191,10 @@ void espnow_task(void *pvParameters) {
         kb_mgt_desync_layer(data->layer);
         break;
       case MOD_SYNC:
-        kb_mgt_sync_modifier(data->report.modifiers);
+        kb_mgt_sync_modifier(data->key_report.modifiers);
         break;
       case MOD_DESYNC:
-        kb_mgt_desync_modifier(data->report.modifiers);
+        kb_mgt_desync_modifier(data->key_report.modifiers);
         break;
       case REQ_HEARTBEAT:
 #if IS_MASTER
@@ -237,10 +241,13 @@ void send_to_espnow(espnow_from_t from, espnow_event_info_data_type_t type, void
     info_data->conn = *(bool *)data;
     break;
   case TAP:
-    memcpy(&info_data->report, (kb_mgt_hid_report_t *)data, sizeof(kb_mgt_hid_report_t));
+    memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
+    break;
+  case CONSUMER:
+    memcpy(&info_data->consumer_report, (kb_mgt_hid_consumer_report_t *)data, sizeof(kb_mgt_hid_consumer_report_t));
     break;
   case BRIEF_TAP:
-    memcpy(&info_data->report, (kb_mgt_hid_report_t *)data, sizeof(kb_mgt_hid_report_t));
+    memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
     break;
   case LAYER_SYNC:
     info_data->layer = *(uint8_t *)data;
@@ -249,10 +256,10 @@ void send_to_espnow(espnow_from_t from, espnow_event_info_data_type_t type, void
     info_data->layer = *(uint8_t *)data;
     break;
   case MOD_SYNC:
-    memcpy(&info_data->report, (kb_mgt_hid_report_t *)data, sizeof(kb_mgt_hid_report_t));
+    memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
     break;
   case MOD_DESYNC:
-    memcpy(&info_data->report, (kb_mgt_hid_report_t *)data, sizeof(kb_mgt_hid_report_t));
+    memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
     break;
 #if !IS_MASTER
   case REQ_HEARTBEAT:

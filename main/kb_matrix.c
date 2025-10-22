@@ -84,7 +84,7 @@ bool matrix_scan(key_event_t *event, uint8_t *event_count) {
       bool current_state = matrix_state.current_state[row][col];
 
       if (key_state != raw_state) reset_and_track_key_state(key_state, row, col, current_time);
-      
+
       bool debounce_elapsed = (current_time - matrix_state.debounce_time[row][col]) >= DEBOUNCE_TIME_MS;
       bool state_actually_changes = debounce_elapsed && (current_state != raw_state);
       if (state_actually_changes) {
@@ -99,12 +99,7 @@ bool matrix_scan(key_event_t *event, uint8_t *event_count) {
 
           (*event_count)++;
           detected_changes = true;
-
-          ESP_LOGI(TAG, "Key %s at [%d:%d] -> %s",
-                   raw_state ? "pressed" : "released",
-                   row, col,
-                   keymap_key_to_string(keymap_get_key(kb_mgt_layer_get_active(), row, col)));
-          }
+        }
       }
 
       esp_rom_delay_us(GPIO_SETTLE_US);
@@ -118,8 +113,6 @@ bool matrix_scan(key_event_t *event, uint8_t *event_count) {
     matrix_set_row(r, true);
   }
 
-  vTaskDelay(1);
-
   return detected_changes;
 }
 
@@ -129,7 +122,11 @@ void process_key_event(key_event_t *events, uint8_t *event_count) {
   kb_mgt_processor_check_tap_timeouts(current_time);
 
   for (int i = 0; i < *event_count; i++) {
-    key_definition_t key = keymap_get_key(kb_mgt_layer_get_active(), events[i].row, events[i].col);
+#if !IS_MASTER
+      key_definition_t key = keymap_get_key(kb_mgt_layer_get_active(), events[i].row, MATRIX_COL - 1 - events[i].col);
+#else
+      key_definition_t key = keymap_get_key(kb_mgt_layer_get_active(), events[i].row, events[i].col);
+#endif
     bool pressed = events[i].pressed;
 
     kb_mgt_process_key_event(key, events[i].row, events[i].col, pressed, current_time);

@@ -20,6 +20,8 @@ typedef enum {
   // Heartbeat
   REQ_HEARTBEAT,
   RES_HEARTBEAT,
+  // Consumer control
+  CONSUMER,
 } espnow_event_info_data_type_t;
 
 typedef enum {
@@ -32,7 +34,10 @@ typedef struct {
   espnow_from_t                   from;
   espnow_event_info_data_type_t   type;
   union {
-    kb_mgt_hid_report_t           report;
+    union {
+      kb_mgt_hid_consumer_report_t  consumer_report;
+      kb_mgt_hid_key_report_t       key_report;
+    };
     uint8_t                       layer;
     bool                          conn;
     bool                          alive;

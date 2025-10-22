@@ -7,6 +7,8 @@
 // HID Report IDs
 #define HID_KEYBOARD_REPORT_ID   0x01
 #define HID_CONSUMER_REPORT_ID   0x02
+#define HID_MOUSE_REPORT_ID      0x03
+#define HID_SYSTEM_REPORT_ID     0x04
 
 // HID Modifier keys
 #define HID_MOD_LEFT_CTRL       0x01
@@ -167,41 +169,26 @@
 #define HID_KEY_VOLUMEDOWN      0x81
 
 // Media keys (Consumer usage page)
-#define HID_CONSUMER_PLAY_PAUSE     0xCD
-#define HID_CONSUMER_SCAN_NEXT      0xB5
-#define HID_CONSUMER_SCAN_PREV      0xB6
-#define HID_CONSUMER_STOP           0xB7
-#define HID_CONSUMER_EJECT          0xB8
-#define HID_CONSUMER_VOLUME_UP      0xE9
-#define HID_CONSUMER_VOLUME_DOWN    0xEA
-#define HID_CONSUMER_MUTE           0xE2
-#define HID_CONSUMER_BASS_BOOST     0xE5
-#define HID_CONSUMER_LOUDNESS       0xE7
+#define HID_CONSUMER_BRIGHTNESS_UP    0x6F
+#define HID_CONSUMER_BRIGHTNESS_DOWN  0x70
 
-// Shifted symbol keys (for convenience)
-#define HID_KEY_EXCLAMATION     HID_KEY_1    // ! (Shift+1)
-#define HID_KEY_AT              HID_KEY_2    // @ (Shift+2)
-#define HID_KEY_HASH            HID_KEY_3    // # (Shift+3)
-#define HID_KEY_DOLLAR          HID_KEY_4    // $ (Shift+4)
-#define HID_KEY_PERCENT         HID_KEY_5    // % (Shift+5)
-#define HID_KEY_CARET           HID_KEY_6    // ^ (Shift+6)
-#define HID_KEY_AMPERSAND       HID_KEY_7    // & (Shift+7)
-#define HID_KEY_ASTERISK        HID_KEY_8    // * (Shift+8)
-#define HID_KEY_LPAREN          HID_KEY_9    // ( (Shift+9)
-#define HID_KEY_RPAREN          HID_KEY_0    // ) (Shift+0)
-#define HID_KEY_UNDERSCORE      HID_KEY_MINUS    // _ (Shift+-)
-#define HID_KEY_PLUS            HID_KEY_EQUAL    // + (Shift+=)
-#define HID_KEY_LCBRACE         HID_KEY_LEFTBRACE    // { (Shift+[)
-#define HID_KEY_RCBRACE         HID_KEY_RIGHTBRACE   // } (Shift+])
-#define HID_KEY_PIPE            HID_KEY_BACKSLASH    // | (Shift+\)
-#define HID_KEY_COLON           HID_KEY_SEMICOLON    // : (Shift+;)
-#define HID_KEY_DQUOTE          HID_KEY_APOSTROPHE   // " (Shift+')
-#define HID_KEY_TILDE           HID_KEY_GRAVE        // ~ (Shift+`)
-#define HID_KEY_LESS            HID_KEY_COMMA        // < (Shift+,)
-#define HID_KEY_GREATER         HID_KEY_DOT          // > (Shift+.)
-#define HID_KEY_QUESTION        HID_KEY_SLASH        // ? (Shift+/)
+#define HID_CONSUMER_PLAY             0xB0
+#define HID_CONSUMER_PAUSE            0xB1
+#define HID_CONSUMER_RECORD           0xB2
+#define HID_CONSUMER_FAST_FORWARD     0xB3
+#define HID_CONSUMER_REWIND           0xB4
+#define HID_CONSUMER_SCAN_NEXT        0xB5
+#define HID_CONSUMER_SCAN_PREV        0xB6
+#define HID_CONSUMER_STOP             0xB7
+#define HID_CONSUMER_EJECT            0xB8
 
-extern const unsigned char keyboardReportMap[65];
+#define HID_CONSUMER_MUTE             0xE2
+#define HID_CONSUMER_BASS_BOOST       0xE5
+#define HID_CONSUMER_LOUDNESS         0xE7
+#define HID_CONSUMER_VOLUME_UP        0xE9
+#define HID_CONSUMER_VOLUME_DOWN      0xEA
+
+#define HID_CONSUMER_PLAY_PAUSE       0xCD
 
 typedef struct {
   esp_hidd_dev_t *hid_dev;

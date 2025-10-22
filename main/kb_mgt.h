@@ -16,38 +16,44 @@ extern esp_hidd_dev_t *hid_dev;
 
 // Key processing result types
 typedef enum {
-    KB_MGT_RESULT_SUCCESS,
-    KB_MGT_RESULT_REPORT_FULL,
-    KB_MGT_RESULT_KEY_NOT_FOUND,
-    KB_MGT_RESULT_INVALID_PARAM,
-    KB_MGT_RESULT_ERROR
+  KB_MGT_RESULT_SUCCESS,
+  KB_MGT_RESULT_REPORT_FULL,
+  KB_MGT_RESULT_KEY_NOT_FOUND,
+  KB_MGT_RESULT_INVALID_PARAM,
+  KB_MGT_RESULT_ERROR
 } kb_mgt_result_t;
 
 // Communication event types for ESP-NOW
 typedef enum {
-    KB_COMM_EVENT_TAP,
-    KB_COMM_EVENT_BRIEF_TAP,
-    KB_COMM_EVENT_LAYER_SYNC,
-    KB_COMM_EVENT_LAYER_DESYNC,
-    KB_COMM_EVENT_MOD_SYNC,
-    KB_COMM_EVENT_MOD_DESYNC
+  KB_COMM_EVENT_TAP,
+  KB_COMM_EVENT_BRIEF_TAP,
+  KB_COMM_EVENT_LAYER_SYNC,
+  KB_COMM_EVENT_LAYER_DESYNC,
+  KB_COMM_EVENT_MOD_SYNC,
+  KB_COMM_EVENT_MOD_DESYNC,
+  KB_COMM_EVENT_CONSUMER
 } kb_comm_event_t;
 
 // Forward declarations
 typedef struct {
-    uint8_t modifiers;
-    uint8_t reserved;
-    uint8_t keys[HID_MAX_KEYS_IN_REPORT];
-} kb_mgt_hid_report_t;
+  uint8_t modifiers;
+  uint8_t reserved;
+  uint8_t keys[HID_MAX_KEYS_IN_REPORT];
+} kb_mgt_hid_key_report_t;
 
 typedef struct {
-    uint8_t           current_layer;
-    uint32_t          layer_tap_timer[MATRIX_ROW][MATRIX_COL];
-    uint32_t          mod_tap_timer[MATRIX_ROW][MATRIX_COL];
-    key_definition_t  pressed_keys[MATRIX_ROW][MATRIX_COL];
-    bool              key_is_tapped[MATRIX_ROW][MATRIX_COL];
-    bool              layer_momentary_active[MAX_LAYERS];
-    bool              pressed_key_active[MATRIX_ROW][MATRIX_COL];
+  uint16_t usage;
+} kb_mgt_hid_consumer_report_t;
+
+typedef struct {
+  uint8_t           current_layer;
+  uint32_t          layer_tap_timer[MATRIX_ROW][MATRIX_COL];
+  uint32_t          mod_tap_timer[MATRIX_ROW][MATRIX_COL];
+  uint16_t          key_tap_timeout[MATRIX_ROW][MATRIX_COL];
+  key_definition_t  pressed_keys[MATRIX_ROW][MATRIX_COL];
+  bool              key_is_tapped[MATRIX_ROW][MATRIX_COL];
+  bool              layer_momentary_active[MAX_LAYERS];
+  bool              pressed_key_active[MATRIX_ROW][MATRIX_COL];
 } kb_mgt_processor_state_t;
 
 // =============================================================================
@@ -58,7 +64,16 @@ typedef struct {
 esp_err_t kb_mgt_hid_init(void);
 
 // Get current HID report
-kb_mgt_hid_report_t* kb_mgt_hid_get_current_report(void);
+kb_mgt_hid_key_report_t* kb_mgt_hid_get_current_report(void);
+
+// Get current HID(Consumer) report
+kb_mgt_hid_consumer_report_t* kb_mgt_hid_get_current_consumer_report(void);
+
+// Set HID(Consumer) report
+void kb_mgt_hid_set_consumer(uint16_t usage);
+
+// Clear HID(Consumer) report
+void kb_mgt_hid_clear_consumer(void);
 
 // Add key to HID report
 kb_mgt_result_t kb_mgt_hid_add_key(uint8_t keycode);
@@ -74,6 +89,9 @@ void kb_mgt_hid_clear_modifier(uint8_t modifier);
 
 // Send HID report (only if master)
 void kb_mgt_hid_send_report(void);
+
+// Send HID(Consumer) report (only if master)
+void kb_mgt_hid_send_consumer_report(void);
 
 // Clear entire HID report
 void kb_mgt_hid_clear_report(void);
