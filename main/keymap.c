@@ -85,11 +85,11 @@ static const key_definition_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
     //      NO       NO       NO       NO       NO       NO
     // SHIFT/ENT     NO
     [2] = {
-        {NORM_KEY(KC_F7),       NORM_KEY(KC_F8),        NORM_KEY(KC_F9),                NORM_KEY(KC_F10),           NORM_KEY(KC_F11),     NORM_KEY(KC_F12)},
-        {NORM_KEY(KC_PGUP),     NORM_KEY(KC_HOME),      NORM_KEY(KC_UP),                NORM_KEY(KC_END),           NORM_KEY(KC_NO),      NORM_KEY(KC_DEL)},
-        {NORM_KEY(KC_PGDN),     NORM_KEY(KC_LEFT),      NORM_KEY(KC_DOWN),              NORM_KEY(KC_RIGHT),         NORM_KEY(KC_NO),      NORM_KEY(KC_INS)},
-        {NORM_KEY(KC_NO),       NORM_KEY(KC_NO),        NORM_KEY(KC_NO),                NORM_KEY(KC_NO),            NORM_KEY(KC_NO),      NORM_KEY(KC_NO)},
-        {TRANS_KEY(),           TRANS_KEY(),            NORM_KEY(KC_NO),                NORM_KEY(KC_NO),            NORM_KEY(KC_NO),      NORM_KEY(KC_NO)},
+        {NORM_KEY(KC_F7),   NORM_KEY(KC_F8),        NORM_KEY(KC_F9),                NORM_KEY(KC_F10),           NORM_KEY(KC_F11),     NORM_KEY(KC_F12)},
+        {NORM_KEY(KC_PGUP), NORM_KEY(KC_HOME),      NORM_KEY(KC_UP),                NORM_KEY(KC_END),           NORM_KEY(KC_NO),      NORM_KEY(KC_DEL)},
+        {NORM_KEY(KC_PGDN), NORM_KEY(KC_LEFT),      NORM_KEY(KC_DOWN),              NORM_KEY(KC_RIGHT),         NORM_KEY(KC_NO),      NORM_KEY(KC_INS)},
+        {NORM_KEY(KC_NO),   NORM_KEY(KC_NO),        NORM_KEY(KC_NO),                NORM_KEY(KC_NO),            NORM_KEY(KC_NO),      NORM_KEY(KC_NO)},
+        {TRANS_KEY(),       TRANS_KEY(),            NORM_KEY(KC_NO),                NORM_KEY(KC_NO),            NORM_KEY(KC_NO),      NORM_KEY(KC_NO)},
     },
     #endif
 };
