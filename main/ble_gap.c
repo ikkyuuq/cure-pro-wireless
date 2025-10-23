@@ -99,9 +99,9 @@ esp_err_t gap_adv_init(uint16_t appearance) {
   ble_hs_cfg.sm_mitm = 0;
   ble_hs_cfg.sm_sc = 0;
   ble_hs_cfg.sm_our_key_dist =
-      BLE_SM_PAIR_KEY_DIST_ID | BLE_SM_PAIR_KEY_DIST_ENC;
+    BLE_SM_PAIR_KEY_DIST_ID | BLE_SM_PAIR_KEY_DIST_ENC;
   ble_hs_cfg.sm_their_key_dist |=
-      BLE_SM_PAIR_KEY_DIST_ID | BLE_SM_PAIR_KEY_DIST_ENC;
+    BLE_SM_PAIR_KEY_DIST_ID | BLE_SM_PAIR_KEY_DIST_ENC;
 
   return ESP_OK;
 }
@@ -188,107 +188,107 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg) {
   int rc;
 
   switch (event->type) {
-  case BLE_GAP_EVENT_CONNECT:
-    /* A new connection was established or a connection attempt failed. */
-    ESP_LOGI(TAG, "connection %s; status=%d",
-             event->connect.status == 0 ? "established" : "failed",
-             event->connect.status);
+    case BLE_GAP_EVENT_CONNECT:
+      /* A new connection was established or a connection attempt failed. */
+      ESP_LOGI(TAG, "connection %s; status=%d",
+               event->connect.status == 0 ? "established" : "failed",
+               event->connect.status);
 
-    if (event->connect.status == 0) {
-      struct ble_gap_upd_params params = {
-        .itvl_min = 6,
-        .itvl_max = 9,
-        .latency = 0,
-        .supervision_timeout = 100
-      };
-      int rc = ble_gap_update_params(event->connect.conn_handle, &params);
-      if (rc != 0) {
-        ESP_LOGW(TAG, "Failed to request low latency params; rc=%d", rc);
+      if (event->connect.status == 0) {
+        struct ble_gap_upd_params params = {
+          .itvl_min = 6,
+          .itvl_max = 9,
+          .latency = 0,
+          .supervision_timeout = 100
+        };
+        int rc = ble_gap_update_params(event->connect.conn_handle, &params);
+        if (rc != 0) {
+          ESP_LOGW(TAG, "Failed to request low latency params; rc=%d", rc);
+        }
+        matrix_scan_start();
+        bool conn_state = true;
+        send_to_espnow(MASTER, CONN, &conn_state);
+        indicator_set_conn_state(CONN_STATE_CONNECTED);
+      } else {
+        matrix_scan_stop();
+        bool conn_state = false;
+        send_to_espnow(MASTER, CONN, &conn_state);
+        indicator_set_conn_state(CONN_STATE_WAITING);
       }
-      matrix_scan_start();
-      bool conn_state = true;
-      send_to_espnow(MASTER, CONN, &conn_state);
-      indicator_set_conn_state(CONN_STATE_CONNECTED);
-    } else {
+      return 0;
+      break;
+    case BLE_GAP_EVENT_DISCONNECT:
+      ESP_LOGI(TAG, "disconnect; reason=%d", event->disconnect.reason);
+
       matrix_scan_stop();
       bool conn_state = false;
       send_to_espnow(MASTER, CONN, &conn_state);
       indicator_set_conn_state(CONN_STATE_WAITING);
-    }
-    return 0;
-    break;
-  case BLE_GAP_EVENT_DISCONNECT:
-    ESP_LOGI(TAG, "disconnect; reason=%d", event->disconnect.reason);
 
-    matrix_scan_stop();
-    bool conn_state = false;
-    send_to_espnow(MASTER, CONN, &conn_state);
-    indicator_set_conn_state(CONN_STATE_WAITING);
-
-    gap_adv_start();
-    return 0;
-  case BLE_GAP_EVENT_CONN_UPDATE:
-    /* The central has updated the connection parameters. */
-    ESP_LOGI(TAG, "connection updated; status=%d", event->conn_update.status);
-    return 0;
-
-  case BLE_GAP_EVENT_ADV_COMPLETE:
-    ESP_LOGI(TAG, "advertise complete; reason=%d", event->adv_complete.reason);
-    gap_adv_start();
-    return 0;
-
-  case BLE_GAP_EVENT_SUBSCRIBE:
-    ESP_LOGI(TAG,
-             "subscribe event; conn_handle=%d attr_handle=%d "
-             "reason=%d prevn=%d curn=%d previ=%d curi=%d\n",
-             event->subscribe.conn_handle, event->subscribe.attr_handle,
-             event->subscribe.reason, event->subscribe.prev_notify,
-             event->subscribe.cur_notify, event->subscribe.prev_indicate,
-             event->subscribe.cur_indicate);
-    return 0;
-
-  case BLE_GAP_EVENT_MTU:
-    ESP_LOGI(TAG, "mtu update event; conn_handle=%d cid=%d mtu=%d",
-             event->mtu.conn_handle, event->mtu.channel_id, event->mtu.value);
-    return 0;
-
-  case BLE_GAP_EVENT_ENC_CHANGE:
-    /* Encryption has been enabled or disabled for this connection. */
-    MODLOG_DFLT(INFO, "encryption change event; status=%d ",
-                event->enc_change.status);
-    rc = ble_gap_conn_find(event->enc_change.conn_handle, &desc);
-    if (rc != 0) {
-      ESP_LOGW(TAG, "Connection not found in enc_change event; rc=%d", rc);
+      gap_adv_start();
       return 0;
-    }
-    return 0;
+    case BLE_GAP_EVENT_CONN_UPDATE:
+      /* The central has updated the connection parameters. */
+      ESP_LOGI(TAG, "connection updated; status=%d", event->conn_update.status);
+      return 0;
 
-  case BLE_GAP_EVENT_NOTIFY_TX:
-    MODLOG_DFLT(INFO,
-                "notify_tx event; conn_handle=%d attr_handle=%d "
-                "status=%d is_indication=%d",
-                event->notify_tx.conn_handle, event->notify_tx.attr_handle,
-                event->notify_tx.status, event->notify_tx.indication);
-    return 0;
+    case BLE_GAP_EVENT_ADV_COMPLETE:
+      ESP_LOGI(TAG, "advertise complete; reason=%d", event->adv_complete.reason);
+      gap_adv_start();
+      return 0;
 
-  case BLE_GAP_EVENT_REPEAT_PAIRING:
-    /* We already have a bond with the peer, but it is attempting to
+    case BLE_GAP_EVENT_SUBSCRIBE:
+      ESP_LOGI(TAG,
+               "subscribe event; conn_handle=%d attr_handle=%d "
+               "reason=%d prevn=%d curn=%d previ=%d curi=%d\n",
+               event->subscribe.conn_handle, event->subscribe.attr_handle,
+               event->subscribe.reason, event->subscribe.prev_notify,
+               event->subscribe.cur_notify, event->subscribe.prev_indicate,
+               event->subscribe.cur_indicate);
+      return 0;
+
+    case BLE_GAP_EVENT_MTU:
+      ESP_LOGI(TAG, "mtu update event; conn_handle=%d cid=%d mtu=%d",
+               event->mtu.conn_handle, event->mtu.channel_id, event->mtu.value);
+      return 0;
+
+    case BLE_GAP_EVENT_ENC_CHANGE:
+      /* Encryption has been enabled or disabled for this connection. */
+      MODLOG_DFLT(INFO, "encryption change event; status=%d ",
+                  event->enc_change.status);
+      rc = ble_gap_conn_find(event->enc_change.conn_handle, &desc);
+      if (rc != 0) {
+        ESP_LOGW(TAG, "Connection not found in enc_change event; rc=%d", rc);
+        return 0;
+      }
+      return 0;
+
+    case BLE_GAP_EVENT_NOTIFY_TX:
+      MODLOG_DFLT(INFO,
+                  "notify_tx event; conn_handle=%d attr_handle=%d "
+                  "status=%d is_indication=%d",
+                  event->notify_tx.conn_handle, event->notify_tx.attr_handle,
+                  event->notify_tx.status, event->notify_tx.indication);
+      return 0;
+
+    case BLE_GAP_EVENT_REPEAT_PAIRING:
+      /* We already have a bond with the peer, but it is attempting to
      * establish a new secure link.  This app sacrifices security for
      * convenience: just throw away the old bond and accept the new link.
      */
 
-    /* Delete the old bond. */
-    rc = ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc);
-    if (rc != 0) {
-      ESP_LOGW(TAG, "Connection not found in repeat_pairing event; rc=%d", rc);
-      return BLE_GAP_REPEAT_PAIRING_RETRY;
-    }
-    ble_store_util_delete_peer(&desc.peer_id_addr);
+      /* Delete the old bond. */
+      rc = ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc);
+      if (rc != 0) {
+        ESP_LOGW(TAG, "Connection not found in repeat_pairing event; rc=%d", rc);
+        return BLE_GAP_REPEAT_PAIRING_RETRY;
+      }
+      ble_store_util_delete_peer(&desc.peer_id_addr);
 
-    /* Return BLE_GAP_REPEAT_PAIRING_RETRY to indicate that the host should
+      /* Return BLE_GAP_REPEAT_PAIRING_RETRY to indicate that the host should
      * continue with the pairing operation.
      */
-    return BLE_GAP_REPEAT_PAIRING_RETRY;
+      return BLE_GAP_REPEAT_PAIRING_RETRY;
   }
   return 0;
 }

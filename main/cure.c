@@ -13,7 +13,8 @@ static const char *TAG = "DEV";
 #if IS_MASTER
 #if CONFIG_BT_BLE_ENABLED || CONFIG_BT_NIMBLE_ENABLED
 
-void ble_host_tasks(void *param) {
+void ble_host_tasks(void *param)
+{
   ESP_LOGI(TAG, "BLE Host Task Started!");
   nimble_port_run();
   nimble_port_freertos_deinit();
@@ -24,7 +25,8 @@ void ble_store_config_init(void);
 #endif // CONFIG_BT_BLE_ENABLED || CONFIG_BT_NIMBLE_ENABLED
 #endif // IS_MASTER
 
-void app_main(void) {
+void app_main(void)
+{
   esp_err_t ret;
 #if HID_DEV_MODE == HIDD_IDLE_MODE
   ESP_LOGE(TAG, "Please turn on BT HID device or BLE!");
@@ -32,8 +34,8 @@ void app_main(void) {
 #endif
 
   ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-      ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+  {
     ESP_ERROR_CHECK(nvs_flash_erase());
     ret = nvs_flash_init();
   }
@@ -56,7 +58,8 @@ void app_main(void) {
 
   ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
   ret = esp_nimble_enable(ble_host_tasks);
-  if (ret) {
+  if (ret)
+  {
     ESP_LOGE(TAG, "esp_nimble_enable failed: %d", ret);
   }
 

@@ -128,39 +128,39 @@ esp_err_t indicator_init(void) {
 // =============================================================================
 
 conn_state_t indicator_get_conn_state(void) {
-    return current_conn_state;
+  return current_conn_state;
 }
 
 batt_state_t indicator_get_batt_state(void) {
-    return current_batt_state;
+  return current_batt_state;
 }
 
 void indicator_set_conn_state(conn_state_t state) {
-    if (current_conn_state == state) return;
+  if (current_conn_state == state) return;
 
-    current_conn_state = state;
-    const color_t off_color   = COLOR_OFF;
-    const color_t green_color = COLOR_GREEN;
-    const color_t blue_color  = COLOR_BLUE;
+  current_conn_state = state;
+  const color_t off_color   = COLOR_OFF;
+  const color_t green_color = COLOR_GREEN;
+  const color_t blue_color  = COLOR_BLUE;
 
-    switch (state) {
-        case CONN_STATE_CONNECTED:
-        stop_blinking(conn_indicator_hdl);
-        set_color(green_color, conn_indicator_hdl);
-        ESP_LOGI(TAG, "Connection state: CONNECTED (Green)");
-        break;
+  switch (state) {
+    case CONN_STATE_CONNECTED:
+      stop_blinking(conn_indicator_hdl);
+      set_color(green_color, conn_indicator_hdl);
+      ESP_LOGI(TAG, "Connection state: CONNECTED (Green)");
+      break;
 
-        case CONN_STATE_WAITING:
-        start_blinking(conn_indicator_hdl, blue_color);
-        ESP_LOGI(TAG, "Connection state: WAITING (Blue blinking)");
-        break;
+    case CONN_STATE_WAITING:
+      start_blinking(conn_indicator_hdl, blue_color);
+      ESP_LOGI(TAG, "Connection state: WAITING (Blue blinking)");
+      break;
 
-        case CONN_STATE_SLEEPING:
-        stop_blinking(conn_indicator_hdl);
-        set_color(off_color, conn_indicator_hdl);
-        ESP_LOGI(TAG, "Connection state: SLEEPING (Off)");
-        break;
-    }
+    case CONN_STATE_SLEEPING:
+      stop_blinking(conn_indicator_hdl);
+      set_color(off_color, conn_indicator_hdl);
+      ESP_LOGI(TAG, "Connection state: SLEEPING (Off)");
+      break;
+  }
 }
 
 void indicator_set_batt_state(batt_state_t state) {
@@ -210,33 +210,33 @@ static void set_color(color_t color, led_strip_handle_t hdl) {
 }
 
 static void start_blinking(led_strip_handle_t hdl, color_t color) {
-    if (indicator_mutex && xSemaphoreTake(indicator_mutex, portMAX_DELAY) == pdTRUE) {
-        if (hdl == conn_indicator_hdl) {
-            conn_blink_active = true;
-            conn_blink_color = color;
-        } else if (hdl == batt_indicator_hdl) {
-            batt_blink_active = true;
-            batt_blink_color = color;
-        }
-        xSemaphoreGive(indicator_mutex);
+  if (indicator_mutex && xSemaphoreTake(indicator_mutex, portMAX_DELAY) == pdTRUE) {
+    if (hdl == conn_indicator_hdl) {
+      conn_blink_active = true;
+      conn_blink_color = color;
+    } else if (hdl == batt_indicator_hdl) {
+      batt_blink_active = true;
+      batt_blink_color = color;
     }
+    xSemaphoreGive(indicator_mutex);
+  }
 }
 
 static void stop_blinking(led_strip_handle_t hdl) {
-    if (!hdl) return;
+  if (!hdl) return;
 
-    if (indicator_mutex && xSemaphoreTake(indicator_mutex, portMAX_DELAY) == pdTRUE) {
-        if (hdl == conn_indicator_hdl) {
-            conn_blink_active = false;
-            led_strip_clear(hdl);
-            led_strip_refresh(hdl);
-        } else if (hdl == batt_indicator_hdl) {
-            batt_blink_active = false;
-            led_strip_clear(hdl);
-            led_strip_refresh(hdl);
-        }
-        xSemaphoreGive(indicator_mutex);
+  if (indicator_mutex && xSemaphoreTake(indicator_mutex, portMAX_DELAY) == pdTRUE) {
+    if (hdl == conn_indicator_hdl) {
+      conn_blink_active = false;
+      led_strip_clear(hdl);
+      led_strip_refresh(hdl);
+    } else if (hdl == batt_indicator_hdl) {
+      batt_blink_active = false;
+      led_strip_clear(hdl);
+      led_strip_refresh(hdl);
     }
+    xSemaphoreGive(indicator_mutex);
+  }
 }
 
 // =============================================================================

@@ -5,39 +5,39 @@
 
 // Key type definitions
 typedef enum {
-    KEY_TYPE_NORMAL,
-    KEY_TYPE_MODIFIER,
-    KEY_TYPE_SHIFTED,
-    KEY_TYPE_LAYER_TAP,
-    KEY_TYPE_MOD_TAP,
-    KEY_TYPE_LAYER_MOMENTARY,
-    KEY_TYPE_LAYER_TOGGLE,
-    KEY_TYPE_CONSUMER,
-    KEY_TYPE_MACRO,
-    KEY_TYPE_TRANSPARENT
+  KEY_TYPE_NORMAL,
+  KEY_TYPE_MODIFIER,
+  KEY_TYPE_SHIFTED,
+  KEY_TYPE_LAYER_TAP,
+  KEY_TYPE_MOD_TAP,
+  KEY_TYPE_LAYER_MOMENTARY,
+  KEY_TYPE_LAYER_TOGGLE,
+  KEY_TYPE_CONSUMER,
+  KEY_TYPE_MACRO,
+  KEY_TYPE_TRANSPARENT
 } key_type_t;
 
 // Key definition structure
 typedef struct {
-    key_type_t type;
+  key_type_t type;
 
-    union {
-        uint8_t keycode;        // For normal keys
-        uint8_t modifier;       // For modifier keys
-        uint16_t consumer;      // For consumer keys
-        struct {
-            uint8_t tap_key;
-            uint8_t hold_key;
-            uint16_t tap_timeout_ms;  // 0 = use default TAP_TIMEOUT_MS
-        } mod_tap;
-        struct {
-            uint8_t tap_key;
-            uint8_t layer;
-            uint16_t tap_timeout_ms;  // 0 = use default TAP_TIMEOUT_MS
-        } layer_tap;
-        uint8_t layer;          // For layer keys
-        uint8_t macro_id;       // For macros
-    };
+  union {
+    uint8_t keycode;        // For normal keys
+    uint8_t modifier;       // For modifier keys
+    uint16_t consumer;      // For consumer keys
+    struct {
+      uint8_t tap_key;
+      uint8_t hold_key;
+      uint16_t tap_timeout_ms;  // 0 = use default TAP_TIMEOUT_MS
+    } mod_tap;
+    struct {
+      uint8_t tap_key;
+      uint8_t layer;
+      uint16_t tap_timeout_ms;  // 0 = use default TAP_TIMEOUT_MS
+    } layer_tap;
+    uint8_t layer;          // For layer keys
+    uint8_t macro_id;       // For macros
+  };
 } key_definition_t;
 
 // Letter keys

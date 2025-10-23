@@ -82,7 +82,7 @@ esp_err_t matrix_init(void) {
       .pull_up_en = GPIO_PULLUP_ENABLE,
       .pull_down_en = GPIO_PULLDOWN_DISABLE,
     };
-    
+
     ret |= gpio_config(&col_config);
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "Failed to setup GPIO config for columns");
@@ -203,7 +203,7 @@ static bool matrix_scan(key_event_t *event, uint8_t *event_count) {
       // Debounce check
       bool debounce_elapsed = (get_current_time_ms() - matrix_state.debounce_time[row][col]) >= DEBOUNCE_TIME_MS;
       bool state_actually_changes = debounce_elapsed && (mt_state.current != mt_state.raw);
-      
+
       if (state_actually_changes) {
         matrix_state.previous[row][col] = mt_state.current;
         matrix_state.current[row][col] = mt_state.raw;

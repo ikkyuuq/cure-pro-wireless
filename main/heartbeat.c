@@ -26,8 +26,8 @@ static const char TAG[] = "HEARTBEAT";
 
 static TaskHandle_t heartbeat_task_hdl      = NULL;
 static heartbeat_state_t heartbeat_state    = {
-    .received = false,
-    .last_req_time = 0
+  .received = false,
+  .last_req_time = 0
 };
 
 // =============================================================================
@@ -41,20 +41,20 @@ static void heartbeat_task(void *pvParameters);
 // =============================================================================
 
 void heartbeat_start(void) {
-    task_hdl_init(&heartbeat_task_hdl, heartbeat_task, "heartbeat_task",
-        HEARTBEAT_PRIORITY, HEARTBEAT_TASK_STACK_SIZE, NULL);
-    ESP_LOGI(TAG, "Heartbeat monitoring started");
+  task_hdl_init(&heartbeat_task_hdl, heartbeat_task, "heartbeat_task",
+                HEARTBEAT_PRIORITY, HEARTBEAT_TASK_STACK_SIZE, NULL);
+  ESP_LOGI(TAG, "Heartbeat monitoring started");
 }
 
 void heartbeat_stop(void) {
-    task_hdl_cleanup(heartbeat_task_hdl);
-    ESP_LOGI(TAG, "Heartbeat monitoring stopped");
+  task_hdl_cleanup(heartbeat_task_hdl);
+  ESP_LOGI(TAG, "Heartbeat monitoring stopped");
 }
 
 void update_heartbeat(void) {
-    heartbeat_state.received = true;
-    heartbeat_state.last_req_time = get_current_time_ms();
-    ESP_LOGD(TAG, "Heartbeat response received");
+  heartbeat_state.received = true;
+  heartbeat_state.last_req_time = get_current_time_ms();
+  ESP_LOGD(TAG, "Heartbeat response received");
 }
 
 // =============================================================================
@@ -62,47 +62,47 @@ void update_heartbeat(void) {
 // =============================================================================
 
 static void heartbeat_task(void *pvParameters) {
-    ESP_LOGI(TAG, "Heartbeat task started");
+  ESP_LOGI(TAG, "Heartbeat task started");
 
-    while (1) {
-        // Send periodic heartbeat requests
-        if (get_current_time_ms() - heartbeat_state.last_req_time >= HEARTBEAT_INTERVAL_MS) {
-            heartbeat_state.received = false;
-            heartbeat_state.last_req_time = get_current_time_ms();
-            send_to_espnow(SLAVE, REQ_HEARTBEAT, NULL);
-            ESP_LOGD(TAG, "Heartbeat request sent");
-        } else {
-            ESP_LOGE(TAG, "Failed to take heartbeat mutex");
-        }
-
-        // Monitor heartbeat response status
-        if (heartbeat_state.received) {
-            // Heartbeat response received - maintain connected state
-            if (indicator_get_conn_state() != CONN_STATE_CONNECTED) {
-                indicator_set_conn_state(CONN_STATE_CONNECTED);
-            }
-        } else {
-            // No heartbeat response - check timeout conditions
-            if (heartbeat_state.last_req_time > 0) {
-                uint32_t time_since_req = get_current_time_ms() - heartbeat_state.last_req_time;
-
-                // Transition to waiting state after stable transmission period
-                if (time_since_req > HEARTBEAT_STABLE_MS &&
-                    indicator_get_conn_state() == CONN_STATE_CONNECTED) {
-                        indicator_set_conn_state(CONN_STATE_WAITING);
-                        ESP_LOGI(TAG, "Master not responding - entering waiting state");
-                    }
-
-                // Transition to sleeping state after full timeout
-                if (time_since_req > (HEARTBEAT_TIMEOUT_MS + HEARTBEAT_STABLE_MS) &&
-                    indicator_get_conn_state() == CONN_STATE_WAITING) {
-                        indicator_set_conn_state(CONN_STATE_SLEEPING);
-                        ESP_LOGI(TAG, "Master timeout - entering sleep state");
-                        // TODO: Implement deep sleep mode
-                    }
-            }
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(500));
+  while (1) {
+    // Send periodic heartbeat requests
+    if (get_current_time_ms() - heartbeat_state.last_req_time >= HEARTBEAT_INTERVAL_MS) {
+      heartbeat_state.received = false;
+      heartbeat_state.last_req_time = get_current_time_ms();
+      send_to_espnow(SLAVE, REQ_HEARTBEAT, NULL);
+      ESP_LOGD(TAG, "Heartbeat request sent");
+    } else {
+      ESP_LOGE(TAG, "Failed to take heartbeat mutex");
     }
+
+    // Monitor heartbeat response status
+    if (heartbeat_state.received) {
+      // Heartbeat response received - maintain connected state
+      if (indicator_get_conn_state() != CONN_STATE_CONNECTED) {
+        indicator_set_conn_state(CONN_STATE_CONNECTED);
+      }
+    } else {
+      // No heartbeat response - check timeout conditions
+      if (heartbeat_state.last_req_time > 0) {
+        uint32_t time_since_req = get_current_time_ms() - heartbeat_state.last_req_time;
+
+        // Transition to waiting state after stable transmission period
+        if (time_since_req > HEARTBEAT_STABLE_MS &&
+          indicator_get_conn_state() == CONN_STATE_CONNECTED) {
+          indicator_set_conn_state(CONN_STATE_WAITING);
+          ESP_LOGI(TAG, "Master not responding - entering waiting state");
+        }
+
+        // Transition to sleeping state after full timeout
+        if (time_since_req > (HEARTBEAT_TIMEOUT_MS + HEARTBEAT_STABLE_MS) &&
+          indicator_get_conn_state() == CONN_STATE_WAITING) {
+          indicator_set_conn_state(CONN_STATE_SLEEPING);
+          ESP_LOGI(TAG, "Master timeout - entering sleep state");
+          // TODO: Implement deep sleep mode
+        }
+      }
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+  }
 }
