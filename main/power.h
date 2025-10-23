@@ -2,10 +2,6 @@
 #define POWER_H
 
 #include "common.h"
-#include "driver/usb_serial_jtag.h"
-#include "esp_adc/adc_oneshot.h"
-#include "esp_adc/adc_cali.h"
-#include "esp_adc/adc_cali_scheme.h"
 
 #define BATTERY_READ_INTERVAL_MS 10000 // Read battery every 10 seconds
 

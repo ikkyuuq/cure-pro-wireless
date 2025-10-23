@@ -67,10 +67,10 @@ kb_mgt_hid_key_report_t* kb_mgt_hid_get_current_report(void);
 kb_mgt_hid_consumer_report_t* kb_mgt_hid_get_current_consumer_report(void);
 
 // Send HID report (only if master)
-void kb_mgt_hid_send_report(void);
+void kb_mgt_hid_send_report_unsafe(void);
 
 // Send HID(Consumer) report (only if master)
-void kb_mgt_hid_send_consumer_report(void);
+void kb_mgt_hid_send_consumer_report_unsafe(void);
 
 // Clear entire HID report
 void kb_mgt_hid_clear_report(void);

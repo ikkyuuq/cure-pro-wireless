@@ -27,4 +27,9 @@
 #include "nvs_flash.h"
 #include "driver/gpio.h"
 
+#include "driver/usb_serial_jtag.h"
+#include "esp_adc/adc_oneshot.h"
+#include "esp_adc/adc_cali.h"
+#include "esp_adc/adc_cali_scheme.h"
+
 #endif  // COMMON_H

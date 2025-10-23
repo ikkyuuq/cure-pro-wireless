@@ -1,10 +1,10 @@
 /**
  * @file espnow.c
  * @brief ESP-NOW Communication Manager for Split Keyboard
- * 
+ *
  * Handles wireless communication between master and slave halves using ESP-NOW protocol.
  * Manages message queuing, event callbacks, and data synchronization across keyboard halves.
- * 
+ *
  * Key responsibilities:
  * - ESP-NOW initialization and peer management
  * - Message transmission between keyboard halves
@@ -25,8 +25,8 @@ static const char *TAG = "ESPNOW";
 // STATE VARIABLES
 // =============================================================================
 
-static TaskHandle_t  espnow_task_hdl = NULL;
-static QueueHandle_t espnow_queue    = NULL;
+static TaskHandle_t      espnow_task_hdl    = NULL;
+static QueueHandle_t     espnow_queue       = NULL;
 
 // =============================================================================
 // FORWARD DECLARATIONS
@@ -142,38 +142,38 @@ void send_to_espnow(espnow_from_t from, espnow_event_info_data_type_t type, void
   case CONN:
     info_data->conn = *(bool *)data;
     break;
-    
+
   case TAP:
   case BRIEF_TAP:
     memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
     break;
-    
+
   case CONSUMER:
     memcpy(&info_data->consumer_report, (kb_mgt_hid_consumer_report_t *)data, sizeof(kb_mgt_hid_consumer_report_t));
     break;
-    
+
   case LAYER_SYNC:
   case LAYER_DESYNC:
     info_data->layer = *(uint8_t *)data;
     break;
-    
+
   case MOD_SYNC:
   case MOD_DESYNC:
     memcpy(&info_data->key_report, (kb_mgt_hid_key_report_t *)data, sizeof(kb_mgt_hid_key_report_t));
     break;
-    
+
   case REQ_HEARTBEAT:
   case RES_HEARTBEAT:
     // Heartbeat messages have no payload
     break;
-    
+
   default:
     ESP_LOGW(TAG, "Unknown message type: %d", type);
     break;
   }
 
   ret = esp_now_send(espnow_peer_addr, (uint8_t *)info_data, sizeof(espnow_event_info_data_t));
-  
+
   if (info_data) {
     free(info_data);
   }
@@ -217,12 +217,12 @@ static void espnow_send_cb(const esp_now_send_info_t *tx_info,
   espnow_send_cb_t *send_cb = &event.info.send_cb;
 
   memcpy(send_cb->to, tx_info->des_addr, ESP_NOW_ETH_ALEN);
-  
+
   if (status != ESP_NOW_SEND_SUCCESS) {
     ESP_LOGE(TAG, "Failed to send event to destination, status: %d", status);
     return;
   }
-  
+
   send_cb->status = status;
   xQueueSend(espnow_queue, &event, portMAX_DELAY);
 }
@@ -265,7 +265,7 @@ static void espnow_task(void *pvParameters) {
           ESP_LOGI(TAG, "Master disconnected - stopping scan and heartbeat");
         }
         break;
-        
+
       case RES_HEARTBEAT:
         update_heartbeat();
         ESP_LOGI(TAG, "Heartbeat response received from master");
@@ -278,21 +278,21 @@ static void espnow_task(void *pvParameters) {
 #if IS_MASTER
       case TAP:
         memcpy(kb_mgt_hid_get_current_report(), &data->key_report, sizeof(kb_mgt_hid_key_report_t));
-        kb_mgt_hid_send_report();
+        kb_mgt_hid_send_report_unsafe();
         break;
-        
+
       case BRIEF_TAP:
         memcpy(kb_mgt_hid_get_current_report(), &data->key_report, sizeof(kb_mgt_hid_key_report_t));
-        kb_mgt_hid_send_report();
+        kb_mgt_hid_send_report_unsafe();
         kb_mgt_hid_clear_report();
-        kb_mgt_hid_send_report();
+        kb_mgt_hid_send_report_unsafe();
         break;
-        
+
       case CONSUMER:
         memcpy(kb_mgt_hid_get_current_consumer_report(), &data->consumer_report, sizeof(kb_mgt_hid_consumer_report_t));
-        kb_mgt_hid_send_consumer_report();
+        kb_mgt_hid_send_consumer_report_unsafe();
         break;
-        
+
       case REQ_HEARTBEAT:
         send_to_espnow(MASTER, RES_HEARTBEAT, NULL);
         break;
@@ -305,20 +305,20 @@ static void espnow_task(void *pvParameters) {
         ESP_LOGI(TAG, "Layer sync to %d", data->layer);
         kb_mgt_sync_layer(data->layer);
         break;
-        
+
       case LAYER_DESYNC:
         ESP_LOGI(TAG, "Layer desync from %d", data->layer);
         kb_mgt_desync_layer(data->layer);
         break;
-        
+
       case MOD_SYNC:
         kb_mgt_sync_modifier(data->key_report.modifiers);
         break;
-        
+
       case MOD_DESYNC:
         kb_mgt_desync_modifier(data->key_report.modifiers);
         break;
-        
+
       default:
         ESP_LOGW(TAG, "Unknown message type received: %d", data->type);
         break;
@@ -329,11 +329,11 @@ static void espnow_task(void *pvParameters) {
       }
       break;
     }
-    
+
     case EVENT_SEND_CB:
       ESP_LOGI(TAG, "Message sent successfully to destination");
       break;
-      
+
     default:
       ESP_LOGW(TAG, "Unknown event type: %d", event.type);
       break;

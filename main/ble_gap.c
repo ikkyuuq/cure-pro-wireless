@@ -1,10 +1,10 @@
 /**
  * @file ble_gap.c
  * @brief BLE GAP (Generic Access Profile) Manager
- * 
+ *
  * Manages Bluetooth Low Energy advertising, connection handling, and pairing.
  * Handles BLE connection lifecycle, security configuration, and advertising parameters.
- * 
+ *
  * Key responsibilities:
  * - BLE advertising initialization and management
  * - GAP event handling (connect, disconnect, pairing)
@@ -18,6 +18,7 @@
 #include "espnow.h"
 #include "kb_matrix.h"
 #include "indicator.h"
+#include <stdlib.h>
 
 static const char *TAG = "GAP";
 
@@ -57,8 +58,8 @@ static esp_err_t init_low_level(uint8_t mode);
 // =============================================================================
 
 esp_err_t gap_adv_init(uint16_t appearance) {
-  ble_uuid16_t *uuid16, *uuid16_1;
-  /**
+  static ble_uuid16_t DEFAULT_HID_UUID = BLE_UUID16_INIT(GATT_SVR_SVC_HID_UUID);  /**
+
    *  Set the advertisement data included in our advertisements:
    *     - Flags (indicates advertisement type and other general info).
    *     - Advertising tx power.
@@ -88,12 +89,7 @@ esp_err_t gap_adv_init(uint16_t appearance) {
   fields.tx_pwr_lvl_is_present = 1;
   fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
 
-  /* Use default info to advertising as GATT_SVR_SVC_HID */
-  uuid16 = (ble_uuid16_t *)malloc(sizeof(ble_uuid16_t));
-  uuid16_1 = (ble_uuid16_t[]){BLE_UUID16_INIT(GATT_SVR_SVC_HID_UUID)};
-
-  memcpy(uuid16, uuid16_1, sizeof(ble_uuid16_t));
-  fields.uuids16 = uuid16;
+  fields.uuids16 = &DEFAULT_HID_UUID;
   fields.num_uuids16 = 1;
   fields.uuids16_is_complete = 1;
 
