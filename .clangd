@@ -1,0 +1,22 @@
+# Universal clangd config
+
+CompileFlags:
+  Remove:
+    # GCC-specific (not in clang)
+    - -fno-shrink-wrap
+    - -fstrict-volatile-bitfields
+    - -fno-tree-switch-conversion
+    - -fzero-init-padding-bits=all
+    - -fno-malloc-dce
+
+    # Architecture (auto-detected)
+    - -march=*
+    - -mabi=*
+    - -mcpu=*
+
+    # Platform-specific
+    - -mlongcalls
+    - -mtext-section-literals
+
+Diagnostics:
+  UnusedIncludes: None

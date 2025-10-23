@@ -8,14 +8,15 @@
 // Forward declaration to avoid circular dependency with espnow.h
 struct esp_hidd_dev_s;
 typedef struct esp_hidd_dev_s esp_hidd_dev_t;
-extern esp_hidd_dev_t *hid_dev;
+extern esp_hidd_dev_t        *hid_dev;
 
 // HID Configuration Constants
-#define HID_MAX_KEYS_IN_REPORT  6
-#define HID_KEY_SHIFT_LAST_IDX  5
+#define HID_MAX_KEYS_IN_REPORT 6
+#define HID_KEY_SHIFT_LAST_IDX 5
 
 // Key processing result types
-typedef enum {
+typedef enum
+{
   KB_MGT_RESULT_SUCCESS,
   KB_MGT_RESULT_REPORT_FULL,
   KB_MGT_RESULT_KEY_NOT_FOUND,
@@ -24,7 +25,8 @@ typedef enum {
 } kb_mgt_result_t;
 
 // Communication event types for ESP-NOW
-typedef enum {
+typedef enum
+{
   KB_COMM_EVENT_TAP,
   KB_COMM_EVENT_BRIEF_TAP,
   KB_COMM_EVENT_LAYER_SYNC,
@@ -35,25 +37,28 @@ typedef enum {
 } kb_comm_event_t;
 
 // Forward declarations
-typedef struct {
+typedef struct
+{
   uint8_t modifiers;
   uint8_t reserved;
   uint8_t keys[HID_MAX_KEYS_IN_REPORT];
 } kb_mgt_hid_key_report_t;
 
-typedef struct {
+typedef struct
+{
   uint16_t usage;
 } kb_mgt_hid_consumer_report_t;
 
-typedef struct {
-  uint8_t           current_layer;
-  uint32_t          layer_tap_timer[MATRIX_ROW][MATRIX_COL];
-  uint32_t          mod_tap_timer[MATRIX_ROW][MATRIX_COL];
-  uint16_t          key_tap_timeout[MATRIX_ROW][MATRIX_COL];
-  key_definition_t  pressed_keys[MATRIX_ROW][MATRIX_COL];
-  bool              key_is_tapped[MATRIX_ROW][MATRIX_COL];
-  bool              layer_momentary_active[MAX_LAYERS];
-  bool              pressed_key_active[MATRIX_ROW][MATRIX_COL];
+typedef struct
+{
+  uint8_t          current_layer;
+  uint32_t         layer_tap_timer[MATRIX_ROW][MATRIX_COL];
+  uint32_t         mod_tap_timer[MATRIX_ROW][MATRIX_COL];
+  uint16_t         key_tap_timeout[MATRIX_ROW][MATRIX_COL];
+  key_definition_t pressed_keys[MATRIX_ROW][MATRIX_COL];
+  bool             key_is_tapped[MATRIX_ROW][MATRIX_COL];
+  bool             layer_momentary_active[MAX_LAYERS];
+  bool             pressed_key_active[MATRIX_ROW][MATRIX_COL];
 } kb_mgt_processor_state_t;
 
 // =============================================================================
@@ -61,10 +66,10 @@ typedef struct {
 // =============================================================================
 
 // Get current HID report
-kb_mgt_hid_key_report_t* kb_mgt_hid_get_current_report(void);
+kb_mgt_hid_key_report_t *kb_mgt_hid_get_current_report(void);
 
 // Get current HID(Consumer) report
-kb_mgt_hid_consumer_report_t* kb_mgt_hid_get_current_consumer_report(void);
+kb_mgt_hid_consumer_report_t *kb_mgt_hid_get_current_consumer_report(void);
 
 // Send HID report (only if master)
 void kb_mgt_hid_send_report_unsafe(void);
@@ -109,7 +114,8 @@ void kb_mgt_processor_check_tap_timeouts(uint32_t current_time);
 esp_err_t kb_mgt_init(void);
 
 // Process complete key event (combines all subsystems)
-void kb_mgt_process_key_event(key_definition_t key, uint8_t row, uint8_t col, bool pressed, uint32_t timestamp);
+void kb_mgt_process_key_event(key_definition_t key, uint8_t row, uint8_t col,
+                              bool pressed, uint32_t timestamp);
 
 // Send final report after processing events.
 void kb_mgt_finalize_processing(void);

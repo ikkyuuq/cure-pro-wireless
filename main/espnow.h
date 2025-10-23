@@ -6,7 +6,8 @@
 #include "kb_matrix.h"
 #include "kb_mgt.h"
 
-typedef enum {
+typedef enum
+{
   // BLE Connection
   CONN,
   // Tap, Layer Tap, Mod Tap but there're actually sent tap
@@ -24,56 +25,67 @@ typedef enum {
   CONSUMER,
 } espnow_event_info_data_type_t;
 
-typedef enum {
+typedef enum
+{
   MASTER,
   SLAVE,
 } espnow_from_t;
 
-
-typedef struct {
-  espnow_from_t                   from;
-  espnow_event_info_data_type_t   type;
-  union {
-    union {
-      kb_mgt_hid_consumer_report_t  consumer_report;
-      kb_mgt_hid_key_report_t       key_report;
+typedef struct
+{
+  espnow_from_t                 from;
+  espnow_event_info_data_type_t type;
+  union
+  {
+    union
+    {
+      kb_mgt_hid_consumer_report_t consumer_report;
+      kb_mgt_hid_key_report_t      key_report;
     };
-    uint8_t                       layer;
-    bool                          conn;
-    bool                          alive;
+    uint8_t layer;
+    bool    conn;
+    bool    alive;
   };
 } espnow_event_info_data_t;
 
-typedef enum {
+typedef enum
+{
   EVENT_RECV_CB,
   EVENT_SEND_CB,
 } espnow_event_type_t;
 
-typedef struct {
+typedef struct
+{
   uint8_t status;
   uint8_t to[ESP_NOW_ETH_ALEN];
 } espnow_send_cb_t;
 
-typedef struct {
-  uint8_t to[ESP_NOW_ETH_ALEN];
-  uint8_t from[ESP_NOW_ETH_ALEN];
+typedef struct
+{
+  uint8_t                   to[ESP_NOW_ETH_ALEN];
+  uint8_t                   from[ESP_NOW_ETH_ALEN];
   espnow_event_info_data_t *data;
-  uint8_t data_len;
+  uint8_t                   data_len;
 } espnow_recv_cb_t;
 
-typedef struct {
-  union {
+typedef struct
+{
+  union
+  {
     espnow_recv_cb_t recv_cb;
     espnow_send_cb_t send_cb;
   };
 } espnow_event_info_t;
 
-typedef struct {
+typedef struct
+{
   espnow_event_type_t type;
   espnow_event_info_t info;
 } espnow_event_t;
 
 esp_err_t espnow_init(void);
-void send_to_espnow(espnow_from_t from, espnow_event_info_data_type_t type, void *data);
 
-#endif  // ESPNOW_H
+void send_to_espnow(espnow_from_t from, espnow_event_info_data_type_t type,
+                    void *data);
+
+#endif // ESPNOW_H

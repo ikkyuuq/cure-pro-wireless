@@ -26,16 +26,16 @@ static const char *TAG = "POWER";
 static TaskHandle_t power_task_hdl = NULL;
 
 static power_state_t power_state = {
-  .usb_powered = false,
-  .voltage_charging = false,
-  .battery_voltage_mv = 0,
+    .usb_powered = false,
+    .voltage_charging = false,
+    .battery_voltage_mv = 0,
 };
 
 // =============================================================================
 // FORWARD DECLARATIONS
 // =============================================================================
 
-static void power_task(void *pvParameters);
+static void     power_task(void *pvParameters);
 static uint32_t read_battery_voltage(void);
 
 // =============================================================================
@@ -44,10 +44,10 @@ static uint32_t read_battery_voltage(void);
 
 esp_err_t usb_power_init(void)
 {
-  esp_err_t ret;
+  esp_err_t ret = 0;
 
   ret =
-    usb_serial_jtag_driver_install(&USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT());
+      usb_serial_jtag_driver_install(&USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT());
   if (ret != ESP_OK)
   {
     ESP_LOGE(TAG, "Failed to install USB-JTAG driver: %d", ret);
@@ -81,21 +81,21 @@ static void power_task_stop(void)
 
 static uint32_t read_battery_voltage(void)
 {
-  adc_oneshot_unit_handle_t adc1_handle;
+  adc_oneshot_unit_handle_t adc1_handle = NULL;
 
   adc_oneshot_unit_init_cfg_t init_config = {
-    .unit_id = ADC_UNIT_1,
+      .unit_id = ADC_UNIT_1,
   };
   ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config, &adc1_handle));
 
   adc_oneshot_chan_cfg_t config = {
-    .bitwidth = BATT_BIT_WIDTH,
-    .atten = BATT_ADC_ATTEN,
+      .bitwidth = BATT_BIT_WIDTH,
+      .atten = BATT_ADC_ATTEN,
   };
   ESP_ERROR_CHECK(
-    adc_oneshot_config_channel(adc1_handle, BATT_ADC_CHAN, &config));
+      adc_oneshot_config_channel(adc1_handle, BATT_ADC_CHAN, &config));
 
-  int adc_raw;
+  int adc_raw = 0;
   ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, BATT_ADC_CHAN, &adc_raw));
   ESP_ERROR_CHECK(adc_oneshot_del_unit(adc1_handle));
 
@@ -123,7 +123,7 @@ static void power_task(void *pvParameters)
     power_state.usb_powered = usb_serial_jtag_is_connected();
     power_state.battery_voltage_mv = read_battery_voltage();
     power_state.voltage_charging =
-      (power_state.battery_voltage_mv > BATT_VOLTAGE_THRESHOLD_MV);
+        (power_state.battery_voltage_mv > BATT_VOLTAGE_THRESHOLD_MV);
 
     // Update battery indicator based on state
     if (power_state.usb_powered || power_state.voltage_charging)
@@ -132,7 +132,7 @@ static void power_task(void *pvParameters)
       ESP_LOGI(TAG, "Charging state detected");
     }
     else
-  {
+    {
       if (power_state.battery_voltage_mv < BATT_VOLTAGE_CRITICAL_MV)
       {
         indicator_set_batt_state(BATT_STATE_CRITICAL);
@@ -146,7 +146,7 @@ static void power_task(void *pvParameters)
                  power_state.battery_voltage_mv);
       }
       else
-    {
+      {
         indicator_set_batt_state(BATT_STATE_GOOD);
         ESP_LOGD(TAG, "Good battery voltage: %lu mV",
                  power_state.battery_voltage_mv);

@@ -1,9 +1,11 @@
 #include "ble_gap.h"
 #include "espnow.h"
-#include "hid_gatt_svr_svc.h"
 #include "indicator.h"
 #include "kb_matrix.h"
 #include "power.h"
+#if IS_MASTER
+#include "hid_gatt_svr_svc.h"
+#endif
 
 extern const gpio_num_t row_pins[MATRIX_ROW];
 extern const gpio_num_t col_pins[MATRIX_COL];
@@ -27,7 +29,7 @@ void ble_store_config_init(void);
 
 void app_main(void)
 {
-  esp_err_t ret;
+  esp_err_t ret = 0;
 #if HID_DEV_MODE == HIDD_IDLE_MODE
   ESP_LOGE(TAG, "Please turn on BT HID device or BLE!");
   return;

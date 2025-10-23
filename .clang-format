@@ -1,3 +1,4 @@
+---
 Language:        Cpp
 AccessModifierOffset: -2
 AlignAfterOpenBracket: Align
@@ -17,16 +18,16 @@ AlignConsecutiveBitFields:
   AlignFunctionPointers: false
   PadOperators:    false
 AlignConsecutiveDeclarations:
-  Enabled:         false
+  Enabled:         true
   AcrossEmptyLines: false
-  AcrossComments:  false
+  AcrossComments:  true
   AlignCompound:   false
   AlignFunctionPointers: false
   PadOperators:    false
 AlignConsecutiveMacros:
-  Enabled:         false
+  Enabled:         true
   AcrossEmptyLines: false
-  AcrossComments:  false
+  AcrossComments:  true
   AlignCompound:   false
   AlignFunctionPointers: false
   PadOperators:    false
@@ -269,3 +270,4 @@ WhitespaceSensitiveMacros:
   - NS_SWIFT_NAME
   - PP_STRINGIZE
   - STRINGIZE
+...

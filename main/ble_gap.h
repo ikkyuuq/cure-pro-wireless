@@ -6,15 +6,15 @@
 
 #if CONFIG_BT_NIMBLE_ENABLED
 
-#define DEVICE_NAME "CureProWL"
+#define DEVICE_NAME    "CureProWL"
 #define HIDD_IDLE_MODE 0x00
-#define HIDD_BLE_MODE 0x01
-#define HID_DEV_MODE HIDD_BLE_MODE
+#define HIDD_BLE_MODE  0x01
+#define HID_DEV_MODE   HIDD_BLE_MODE
 
-#include "host/ble_hs.h"
 #include "host/ble_gap.h"
-#include "host/ble_sm.h"
+#include "host/ble_hs.h"
 #include "host/ble_hs_adv.h"
+#include "host/ble_sm.h"
 #include "host/ble_store.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
@@ -24,6 +24,6 @@ esp_err_t gap_init(uint8_t mode);
 esp_err_t gap_adv_init(uint16_t appearance);
 esp_err_t gap_adv_start(void);
 
-#endif  // CONFIG_BT_NIMBLE_ENABLED
+#endif // CONFIG_BT_NIMBLE_ENABLED
 
-#endif  // GAP_H
+#endif // GAP_H
