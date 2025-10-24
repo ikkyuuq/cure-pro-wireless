@@ -43,7 +43,7 @@ typedef struct
     uint8_t layer;    // For layer keys
     uint8_t macro_id; // For macros
   };
-} key_definition_t;
+} key_def_t;
 
 // Letter keys
 #define KC_A HID_KEY_A
@@ -221,31 +221,24 @@ typedef struct
 #define KC_AUDIO_VOL_DOWN   HID_CONSUMER_VOLUME_DOWN
 
 // Macro functions for creating complex key definitions
-#define NORM_KEY(k)                                                            \
-  ((key_definition_t){.type = KEY_TYPE_NORMAL, .keycode = (k)})
-#define MOD_KEY(m)                                                             \
-  ((key_definition_t){.type = KEY_TYPE_MODIFIER, .modifier = (m)})
+#define NORM_KEY(k) ((key_def_t){.type = KEY_TYPE_NORMAL, .keycode = (k)})
+#define MOD_KEY(m)  ((key_def_t){.type = KEY_TYPE_MODIFIER, .modifier = (m)})
 #define LAYER_TAP(t, l)                                                        \
-  ((key_definition_t){.type = KEY_TYPE_LAYER_TAP, .layer_tap = {(t), (l), 0}})
+  ((key_def_t){.type = KEY_TYPE_LAYER_TAP, .layer_tap = {(t), (l), 0}})
 #define MOD_TAP(t, m)                                                          \
-  ((key_definition_t){.type = KEY_TYPE_MOD_TAP, .mod_tap = {(t), (m), 0}})
+  ((key_def_t){.type = KEY_TYPE_MOD_TAP, .mod_tap = {(t), (m), 0}})
 #define LAYER_TAP_TO(t, l, to)                                                 \
-  ((key_definition_t){.type = KEY_TYPE_LAYER_TAP,                              \
-                      .layer_tap = {(t), (l), (to)}})
+  ((key_def_t){.type = KEY_TYPE_LAYER_TAP, .layer_tap = {(t), (l), (to)}})
 #define MOD_TAP_TO(t, m, to)                                                   \
-  ((key_definition_t){.type = KEY_TYPE_MOD_TAP, .mod_tap = {(t), (m), (to)}})
-#define LAYER_TOG(l)                                                           \
-  ((key_definition_t){.type = KEY_TYPE_LAYER_TOGGLE, .layer = (l)})
+  ((key_def_t){.type = KEY_TYPE_MOD_TAP, .mod_tap = {(t), (m), (to)}})
+#define LAYER_TOG(l) ((key_def_t){.type = KEY_TYPE_LAYER_TOGGLE, .layer = (l)})
 #define LAYER_MOM(l)                                                           \
-  ((key_definition_t){.type = KEY_TYPE_LAYER_MOMENTARY, .layer = (l)})
-#define CONS_KEY(k)                                                            \
-  ((key_definition_t){.type = KEY_TYPE_CONSUMER, .consumer = (k)})
-#define MACRO_KEY(id)                                                          \
-  ((key_definition_t){.type = KEY_TYPE_MACRO, .macro_id = (id)})
+  ((key_def_t){.type = KEY_TYPE_LAYER_MOMENTARY, .layer = (l)})
+#define CONS_KEY(k)   ((key_def_t){.type = KEY_TYPE_CONSUMER, .consumer = (k)})
+#define MACRO_KEY(id) ((key_def_t){.type = KEY_TYPE_MACRO, .macro_id = (id)})
 #define TRANS_KEY()                                                            \
-  ((key_definition_t){.type = KEY_TYPE_TRANSPARENT, .keycode = KC_TRNS})
-#define SHIFT_KEY(k)                                                           \
-  ((key_definition_t){.type = KEY_TYPE_SHIFTED, .keycode = (k)})
+  ((key_def_t){.type = KEY_TYPE_TRANSPARENT, .keycode = KC_TRNS})
+#define SHIFT_KEY(k) ((key_def_t){.type = KEY_TYPE_SHIFTED, .keycode = (k)})
 
 // Convenient shortcuts
 #define LT(layer, tap)        LAYER_TAP(tap, layer)
@@ -256,6 +249,6 @@ typedef struct
 #define MO(layer)             LAYER_MOM(layer)
 
 // Function declarations
-key_definition_t keymap_get_key(uint8_t layer, uint8_t row, uint8_t col);
+key_def_t keymap_get_key(uint8_t layer, uint8_t row, uint8_t col);
 
 #endif

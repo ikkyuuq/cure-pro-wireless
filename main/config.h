@@ -4,7 +4,7 @@
 
 #include "common.h"
 
-#define IS_MASTER 0
+#define IS_MASTER 1
 
 #define MATRIX_ROW 5
 #define MATRIX_COL 6

@@ -23,7 +23,7 @@ static const char *TAG = "POWER";
 // STATE VARIABLES
 // =============================================================================
 
-static TaskHandle_t power_task_hdl = NULL;
+static TaskHandle_t task_hdl = NULL;
 
 static power_state_t power_state = {
     .usb_powered = false,
@@ -35,7 +35,8 @@ static power_state_t power_state = {
 // FORWARD DECLARATIONS
 // =============================================================================
 
-static void     power_task(void *pvParameters);
+static void     task(void *pvParameters);
+static void     task_stop(void);
 static uint32_t read_battery_voltage(void);
 
 // =============================================================================
@@ -64,14 +65,14 @@ esp_err_t usb_power_init(void)
 
 void power_task_start(void)
 {
-  task_hdl_init(&power_task_hdl, power_task, "power_task", POWER_PRIORITY,
+  task_hdl_init(&task_hdl, task, "power_task", POWER_PRIORITY,
                 POWER_TASK_STACK_SIZE, NULL);
   ESP_LOGI(TAG, "Power monitoring started");
 }
 
-static void power_task_stop(void)
+static void task_stop(void)
 {
-  task_hdl_cleanup(power_task_hdl);
+  task_hdl_cleanup(task_hdl);
   ESP_LOGI(TAG, "Power monitoring stopped");
 }
 
@@ -113,7 +114,7 @@ static uint32_t read_battery_voltage(void)
 // PRIVATE IMPLEMENTATIONS - POWER MONITORING TASK
 // =============================================================================
 
-static void power_task(void *pvParameters)
+static void task(void *pvParameters)
 {
   ESP_LOGI(TAG, "Power task started");
 

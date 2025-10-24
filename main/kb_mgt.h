@@ -17,12 +17,12 @@ extern esp_hidd_dev_t        *hid_dev;
 // Key processing result types
 typedef enum
 {
-  KB_MGT_RESULT_SUCCESS,
-  KB_MGT_RESULT_REPORT_FULL,
-  KB_MGT_RESULT_KEY_NOT_FOUND,
-  KB_MGT_RESULT_INVALID_PARAM,
-  KB_MGT_RESULT_ERROR
-} kb_mgt_result_t;
+  SUCCESS,
+  REPORT_FULL,
+  KEY_NOT_FOUND,
+  INVALID_PARAM,
+  UNKNOWN_ERROR
+} result_t;
 
 // Communication event types for ESP-NOW
 typedef enum
@@ -51,28 +51,28 @@ typedef struct
 
 typedef struct
 {
-  uint8_t          current_layer;
-  uint32_t         layer_tap_timer[MATRIX_ROW][MATRIX_COL];
-  uint32_t         mod_tap_timer[MATRIX_ROW][MATRIX_COL];
-  uint16_t         key_tap_timeout[MATRIX_ROW][MATRIX_COL];
-  key_definition_t pressed_keys[MATRIX_ROW][MATRIX_COL];
-  bool             key_is_tapped[MATRIX_ROW][MATRIX_COL];
-  bool             layer_momentary_active[MAX_LAYERS];
-  bool             pressed_key_active[MATRIX_ROW][MATRIX_COL];
-} kb_mgt_processor_state_t;
+  uint8_t   current_layer;
+  uint32_t  layer_tap_timer[MATRIX_ROW][MATRIX_COL];
+  uint32_t  mod_tap_timer[MATRIX_ROW][MATRIX_COL];
+  uint16_t  key_tap_timeout[MATRIX_ROW][MATRIX_COL];
+  key_def_t pressed_keys[MATRIX_ROW][MATRIX_COL];
+  bool      key_is_tapped[MATRIX_ROW][MATRIX_COL];
+  bool      layer_momentary_active[MAX_LAYERS];
+  bool      pressed_key_active[MATRIX_ROW][MATRIX_COL];
+} proc_state_t;
 
 // =============================================================================
 // HID MANAGEMENT
 // =============================================================================
 
 // Get current HID report
-kb_mgt_hid_key_report_t *kb_mgt_hid_get_current_report(void);
+kb_mgt_hid_key_report_t *kb_mgt_hid_get_current_key_report(void);
 
 // Get current HID(Consumer) report
 kb_mgt_hid_consumer_report_t *kb_mgt_hid_get_current_consumer_report(void);
 
 // Send HID report (only if master)
-void kb_mgt_hid_send_report_unsafe(void);
+void kb_mgt_hid_send_key_report_unsafe(void);
 
 // Send HID(Consumer) report (only if master)
 void kb_mgt_hid_send_consumer_report_unsafe(void);
@@ -104,7 +104,7 @@ void kb_mgt_desync_layer(uint8_t layer);
 // =============================================================================
 
 // Check and handle tap timeouts
-void kb_mgt_processor_check_tap_timeouts(uint32_t current_time);
+void kb_mgt_proc_check_tap_timeouts(uint32_t current_time);
 
 // =============================================================================
 // MAIN MANAGEMENT INTERFACE
@@ -114,7 +114,7 @@ void kb_mgt_processor_check_tap_timeouts(uint32_t current_time);
 esp_err_t kb_mgt_init(void);
 
 // Process complete key event (combines all subsystems)
-void kb_mgt_process_key_event(key_definition_t key, uint8_t row, uint8_t col,
+void kb_mgt_process_key_event(key_def_t key, uint8_t row, uint8_t col,
                               bool pressed, uint32_t timestamp);
 
 // Send final report after processing events.

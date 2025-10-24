@@ -24,8 +24,8 @@ static const char *TAG = "INDICATOR";
 // STATE VARIABLES
 // =============================================================================
 
-static SemaphoreHandle_t indicator_mutex = NULL;
-static TaskHandle_t      indicator_task_hdl = NULL;
+static SemaphoreHandle_t indicator_sem = NULL;
+static TaskHandle_t      task_hdl = NULL;
 
 // LED strip handles
 static led_strip_handle_t batt_indicator_hdl = NULL;
@@ -48,7 +48,7 @@ static batt_state_t current_batt_state = BATT_STATE_GOOD;
 static void set_color(color_t color, led_strip_handle_t hdl);
 static void start_blinking(led_strip_handle_t hdl, color_t color);
 static void stop_blinking(led_strip_handle_t hdl);
-static void indicator_task(void *pvParameters);
+static void task(void *pvParameters);
 
 // =============================================================================
 // PUBLIC API - INITIALIZATION
@@ -58,8 +58,8 @@ esp_err_t indicator_init(void)
 {
   esp_err_t ret = ESP_OK;
 
-  indicator_mutex = xSemaphoreCreateMutex();
-  if (indicator_mutex == NULL)
+  indicator_sem = xSemaphoreCreateMutex();
+  if (!indicator_sem)
   {
     ESP_LOGE(TAG, "Failed to create indicator mutex");
     return ESP_FAIL;
@@ -118,8 +118,8 @@ esp_err_t indicator_init(void)
   led_strip_refresh(batt_indicator_hdl);
 
   // Start indicator task
-  task_hdl_init(&indicator_task_hdl, indicator_task, "indicator_task",
-                INDICATOR_PRIORITY, INDICATOR_TASK_STACK_SIZE, NULL);
+  task_hdl_init(&task_hdl, task, "indicator_task", INDICATOR_PRIORITY,
+                INDICATOR_TASK_STACK_SIZE, NULL);
 
   // Set initial state
   indicator_set_conn_state(CONN_STATE_WAITING);
@@ -220,8 +220,7 @@ static void set_color(color_t color, led_strip_handle_t hdl)
 
 static void start_blinking(led_strip_handle_t hdl, color_t color)
 {
-  if (indicator_mutex &&
-      xSemaphoreTake(indicator_mutex, portMAX_DELAY) == pdTRUE)
+  if (indicator_sem && xSemaphoreTake(indicator_sem, portMAX_DELAY) == pdTRUE)
   {
     if (hdl == conn_indicator_hdl)
     {
@@ -233,7 +232,7 @@ static void start_blinking(led_strip_handle_t hdl, color_t color)
       batt_blink_active = true;
       batt_blink_color = color;
     }
-    xSemaphoreGive(indicator_mutex);
+    xSemaphoreGive(indicator_sem);
   }
 }
 
@@ -242,8 +241,7 @@ static void stop_blinking(led_strip_handle_t hdl)
   if (!hdl)
     return;
 
-  if (indicator_mutex &&
-      xSemaphoreTake(indicator_mutex, portMAX_DELAY) == pdTRUE)
+  if (indicator_sem && xSemaphoreTake(indicator_sem, portMAX_DELAY) == pdTRUE)
   {
     if (hdl == conn_indicator_hdl)
     {
@@ -257,7 +255,7 @@ static void stop_blinking(led_strip_handle_t hdl)
       led_strip_clear(hdl);
       led_strip_refresh(hdl);
     }
-    xSemaphoreGive(indicator_mutex);
+    xSemaphoreGive(indicator_sem);
   }
 }
 
@@ -265,7 +263,7 @@ static void stop_blinking(led_strip_handle_t hdl)
 // PRIVATE IMPLEMENTATIONS - INDICATOR TASK
 // =============================================================================
 
-static void indicator_task(void *pvParameters)
+static void task(void *pvParameters)
 {
   bool     blink_state = false;
   uint32_t last_blink_time = 0;

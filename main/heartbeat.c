@@ -25,15 +25,15 @@ static const char *TAG = "HEARTBEAT";
 // STATE VARIABLES
 // =============================================================================
 
-static TaskHandle_t      heartbeat_task_hdl = NULL;
-static heartbeat_state_t heartbeat_state = {.received = false,
+static TaskHandle_t      task_hdl = NULL;
+static heartbeat_state_t state = {.received = false,
                                             .last_req_time = 0};
 
 // =============================================================================
 // FORWARD DECLARATIONS
 // =============================================================================
 
-static void heartbeat_task(void *pvParameters);
+static void task(void *pvParameters);
 
 // =============================================================================
 // PUBLIC API - TASK CONTROL
@@ -41,21 +41,21 @@ static void heartbeat_task(void *pvParameters);
 
 void heartbeat_start(void)
 {
-  task_hdl_init(&heartbeat_task_hdl, heartbeat_task, "heartbeat_task",
-                HEARTBEAT_PRIORITY, HEARTBEAT_TASK_STACK_SIZE, NULL);
+  task_hdl_init(&task_hdl, task, "heartbeat_task", HEARTBEAT_PRIORITY,
+                HEARTBEAT_TASK_STACK_SIZE, NULL);
   ESP_LOGI(TAG, "Heartbeat monitoring started");
 }
 
 void heartbeat_stop(void)
 {
-  task_hdl_cleanup(heartbeat_task_hdl);
+  task_hdl_cleanup(task_hdl);
   ESP_LOGI(TAG, "Heartbeat monitoring stopped");
 }
 
 void update_heartbeat(void)
 {
-  heartbeat_state.received = true;
-  heartbeat_state.last_req_time = get_current_time_ms();
+  state.received = true;
+  state.last_req_time = get_current_time_ms();
   ESP_LOGD(TAG, "Heartbeat response received");
 }
 
@@ -63,18 +63,18 @@ void update_heartbeat(void)
 // PRIVATE IMPLEMENTATIONS - HEARTBEAT TASK
 // =============================================================================
 
-static void heartbeat_task(void *pvParameters)
+static void task(void *pvParameters)
 {
   ESP_LOGI(TAG, "Heartbeat task started");
 
   while (1)
   {
     // Send periodic heartbeat requests
-    if (get_current_time_ms() - heartbeat_state.last_req_time >=
+    if (get_current_time_ms() - state.last_req_time >=
         HEARTBEAT_INTERVAL_MS)
     {
-      heartbeat_state.received = false;
-      heartbeat_state.last_req_time = get_current_time_ms();
+      state.received = false;
+      state.last_req_time = get_current_time_ms();
       send_to_espnow(SLAVE, REQ_HEARTBEAT, NULL);
       ESP_LOGD(TAG, "Heartbeat request sent");
     }
@@ -84,7 +84,7 @@ static void heartbeat_task(void *pvParameters)
     }
 
     // Monitor heartbeat response status
-    if (heartbeat_state.received)
+    if (state.received)
     {
       // Heartbeat response received - maintain connected state
       if (indicator_get_conn_state() != CONN_STATE_CONNECTED)
@@ -95,10 +95,10 @@ static void heartbeat_task(void *pvParameters)
     else
     {
       // No heartbeat response - check timeout conditions
-      if (heartbeat_state.last_req_time > 0)
+      if (state.last_req_time > 0)
       {
         uint32_t time_since_req =
-            get_current_time_ms() - heartbeat_state.last_req_time;
+            get_current_time_ms() - state.last_req_time;
 
         // Transition to waiting state after stable transmission period
         if (time_since_req > HEARTBEAT_STABLE_MS &&

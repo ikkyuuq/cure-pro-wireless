@@ -2,7 +2,7 @@
 #include "config.h"
 
 // Define keymaps for each layer
-static const key_definition_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
+static const key_def_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
 #if !IS_MASTER
     // Layer 0 - Base layer Left Side
     // =    1  2  3  4  5
@@ -127,7 +127,7 @@ static const key_definition_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
 #endif
 };
 
-key_definition_t keymap_get_key(uint8_t layer, uint8_t row, uint8_t col)
+key_def_t keymap_get_key(uint8_t layer, uint8_t row, uint8_t col)
 {
   if (layer >= MAX_LAYERS || row >= MATRIX_ROW || col >= MATRIX_COL)
   {
@@ -136,7 +136,7 @@ key_definition_t keymap_get_key(uint8_t layer, uint8_t row, uint8_t col)
   return keymaps[layer][row][col];
 }
 
-static const char *keymap_key_to_string(key_definition_t key)
+static const char *key_to_string(key_def_t key)
 {
   switch (key.type)
   {

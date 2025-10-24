@@ -161,14 +161,14 @@ esp_err_t gap_init(uint8_t mode)
   }
 
   bt_hidh_cb_semaphore = xSemaphoreCreateBinary();
-  if (bt_hidh_cb_semaphore == NULL)
+  if (!bt_hidh_cb_semaphore)
   {
     ESP_LOGE(TAG, "xSemaphoreCreateMutex failed!");
     return ESP_FAIL;
   }
 
   ble_hidh_cb_semaphore = xSemaphoreCreateBinary();
-  if (ble_hidh_cb_semaphore == NULL)
+  if (!ble_hidh_cb_semaphore)
   {
     ESP_LOGE(TAG, "xSemaphoreCreateMutex failed!");
     vSemaphoreDelete(bt_hidh_cb_semaphore);

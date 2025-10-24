@@ -26,8 +26,8 @@ static const char *TAG = "MATRIX";
 // STATE VARIABLES
 // =============================================================================
 
-static TaskHandle_t   matrix_task_hdl = NULL;
-static matrix_state_t matrix_state;
+static TaskHandle_t   task_hdl = NULL;
+static matrix_state_t state;
 
 // GPIO pin mappings
 const gpio_num_t row_pins[MATRIX_ROW] = ROW_PINS;
@@ -37,13 +37,13 @@ const gpio_num_t col_pins[MATRIX_COL] = COL_PINS;
 // FORWARD DECLARATIONS
 // =============================================================================
 
-static bool       matrix_scan(key_event_t *event, uint8_t *event_count);
-static void       matrix_set_row(uint8_t row, bool state);
-static bool       matrix_read_col(uint8_t col);
-static bool       matrix_read_raw_state(uint8_t row, uint8_t col);
-static bool       matrix_read_current_state(uint8_t row, uint8_t col);
-static bool       matrix_read_previous_state(uint8_t row, uint8_t col);
-static mt_state_t matrix_read_state(uint8_t row, uint8_t col);
+static bool       scan(key_event_t *event, uint8_t *event_count);
+static void       set_row(uint8_t row, bool state);
+static bool       read_col(uint8_t col);
+static bool       read_raw_state(uint8_t row, uint8_t col);
+static bool       read_current_state(uint8_t row, uint8_t col);
+static bool       read_previous_state(uint8_t row, uint8_t col);
+static mt_state_t read_state(uint8_t row, uint8_t col);
 static void reset_and_track_key_state(bool key_state, uint8_t row, uint8_t col,
                                       uint32_t timestamp);
 static void process_key_event(key_event_t *events, uint8_t *event_count);
@@ -95,7 +95,7 @@ esp_err_t matrix_init(void)
   }
 
   // Initialize matrix state and keyboard management
-  memset(&matrix_state, 0, sizeof(matrix_state_t));
+  memset(&state, 0, sizeof(matrix_state_t));
   ret |= kb_mgt_init();
 
   ESP_LOGI(TAG, "Matrix scanner initialized");
@@ -108,14 +108,14 @@ esp_err_t matrix_init(void)
 
 void matrix_scan_start(void)
 {
-  task_hdl_init(&matrix_task_hdl, matrix_scan_task, "matrix_scan",
+  task_hdl_init(&task_hdl, matrix_scan_task, "matrix_scan",
                 MATRIX_SCAN_PRIORITY, MATRIX_TASK_STACK_SIZE, NULL);
   ESP_LOGI(TAG, "Matrix scanning started");
 }
 
 void matrix_scan_stop(void)
 {
-  task_hdl_cleanup(matrix_task_hdl);
+  task_hdl_cleanup(task_hdl);
   ESP_LOGI(TAG, "Matrix scanning stopped");
 }
 
@@ -128,13 +128,13 @@ void matrix_scan_task(void *pvParameters)
 
   while (1)
   {
-    if (matrix_scan(events, &event_count))
+    if (scan(events, &event_count))
     {
       ESP_LOGD(TAG, "*** KEY EVENT DETECTED: %d events ***", event_count);
       process_key_event(events, &event_count);
     }
 
-    kb_mgt_processor_check_tap_timeouts(get_current_time_ms());
+    kb_mgt_proc_check_tap_timeouts(get_current_time_ms());
     vTaskDelay(pdMS_TO_TICKS(SCAN_INTERVAL_MS));
   }
 }
@@ -143,7 +143,7 @@ void matrix_scan_task(void *pvParameters)
 // PRIVATE IMPLEMENTATIONS - GPIO CONTROL
 // =============================================================================
 
-static void matrix_set_row(uint8_t row, bool state)
+static void set_row(uint8_t row, bool state)
 {
   if (row < MATRIX_ROW)
   {
@@ -151,7 +151,7 @@ static void matrix_set_row(uint8_t row, bool state)
   }
 }
 
-static bool matrix_read_col(uint8_t col)
+static bool read_col(uint8_t col)
 {
   // Inverted due to pull-up resistors
   return col < MATRIX_COL ? !gpio_get_level(col_pins[col]) : false;
@@ -161,31 +161,29 @@ static bool matrix_read_col(uint8_t col)
 // PRIVATE IMPLEMENTATIONS - STATE READERS
 // =============================================================================
 
-static bool matrix_read_raw_state(uint8_t row, uint8_t col)
+static bool read_raw_state(uint8_t row, uint8_t col)
 {
-  return (row < MATRIX_ROW && col < MATRIX_COL) ? matrix_state.raw[row][col]
+  return (row < MATRIX_ROW && col < MATRIX_COL) ? state.raw[row][col] : false;
+}
+
+static bool read_current_state(uint8_t row, uint8_t col)
+{
+  return (row < MATRIX_ROW && col < MATRIX_COL) ? state.current[row][col]
                                                 : false;
 }
 
-static bool matrix_read_current_state(uint8_t row, uint8_t col)
+static bool read_previous_state(uint8_t row, uint8_t col)
 {
-  return (row < MATRIX_ROW && col < MATRIX_COL) ? matrix_state.current[row][col]
+  return (row < MATRIX_ROW && col < MATRIX_COL) ? state.previous[row][col]
                                                 : false;
 }
 
-static bool matrix_read_previous_state(uint8_t row, uint8_t col)
+static mt_state_t read_state(uint8_t row, uint8_t col)
 {
-  return (row < MATRIX_ROW && col < MATRIX_COL)
-             ? matrix_state.previous[row][col]
-             : false;
-}
-
-static mt_state_t matrix_read_state(uint8_t row, uint8_t col)
-{
-  bool raw = matrix_read_raw_state(row, col);
-  bool current = matrix_read_current_state(row, col);
-  bool previous = matrix_read_previous_state(row, col);
-  bool pressed = matrix_read_col(col);
+  bool raw = read_raw_state(row, col);
+  bool current = read_current_state(row, col);
+  bool previous = read_previous_state(row, col);
+  bool pressed = read_col(col);
 
   mt_state_t state = {raw, current, previous, pressed};
   return state;
@@ -194,15 +192,15 @@ static mt_state_t matrix_read_state(uint8_t row, uint8_t col)
 static void reset_and_track_key_state(bool key_state, uint8_t row, uint8_t col,
                                       uint32_t timestamp)
 {
-  matrix_state.raw[row][col] = key_state;
-  matrix_state.debounce_time[row][col] = timestamp;
+  state.raw[row][col] = key_state;
+  state.debounce_time[row][col] = timestamp;
 }
 
 // =============================================================================
 // PRIVATE IMPLEMENTATIONS - MATRIX SCANNING
 // =============================================================================
 
-static bool matrix_scan(key_event_t *event, uint8_t *event_count)
+static bool scan(key_event_t *event, uint8_t *event_count)
 {
   *event_count = 0;
   bool detected_changes = false;
@@ -212,14 +210,14 @@ static bool matrix_scan(key_event_t *event, uint8_t *event_count)
     // Set the current row low, all others high
     for (uint8_t r = 0; r < MATRIX_ROW; r++)
     {
-      matrix_set_row(r, r != row);
+      set_row(r, r != row);
     }
 
     esp_rom_delay_us(GPIO_SETTLE_US);
 
     for (uint8_t col = 0; col < MATRIX_COL; col++)
     {
-      mt_state_t mt_state = matrix_read_state(row, col);
+      mt_state_t mt_state = read_state(row, col);
 
       // Track state changes
       if (mt_state.pressed != mt_state.raw)
@@ -230,15 +228,15 @@ static bool matrix_scan(key_event_t *event, uint8_t *event_count)
 
       // Debounce check
       bool debounce_elapsed =
-          (get_current_time_ms() - matrix_state.debounce_time[row][col]) >=
+          (get_current_time_ms() - state.debounce_time[row][col]) >=
           DEBOUNCE_TIME_MS;
       bool state_actually_changes =
           debounce_elapsed && (mt_state.current != mt_state.raw);
 
       if (state_actually_changes)
       {
-        matrix_state.previous[row][col] = mt_state.current;
-        matrix_state.current[row][col] = mt_state.raw;
+        state.previous[row][col] = mt_state.current;
+        state.current[row][col] = mt_state.raw;
 
         if (*event_count < MAX_KEYS)
         {
@@ -261,7 +259,7 @@ static bool matrix_scan(key_event_t *event, uint8_t *event_count)
   // Set all rows high when done scanning
   for (uint8_t r = 0; r < MATRIX_ROW; r++)
   {
-    matrix_set_row(r, true);
+    set_row(r, true);
   }
 
   return detected_changes;
@@ -273,17 +271,16 @@ static bool matrix_scan(key_event_t *event, uint8_t *event_count)
 
 static void process_key_event(key_event_t *events, uint8_t *event_count)
 {
-  kb_mgt_processor_check_tap_timeouts(get_current_time_ms());
+  kb_mgt_proc_check_tap_timeouts(get_current_time_ms());
 
   for (int i = 0; i < *event_count; i++)
   {
     // Mirror column mapping for slave half
 #if !IS_MASTER
-    key_definition_t key =
-        keymap_get_key(kb_mgt_layer_get_active(), events[i].row,
-                       MATRIX_COL - 1 - events[i].col);
+    key_def_t key = keymap_get_key(kb_mgt_layer_get_active(), events[i].row,
+                                   MATRIX_COL - 1 - events[i].col);
 #else
-    key_definition_t key =
+    key_def_t key =
         keymap_get_key(kb_mgt_layer_get_active(), events[i].row, events[i].col);
 #endif
 

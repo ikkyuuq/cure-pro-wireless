@@ -26,18 +26,18 @@ static const char *TAG = "ESPNOW";
 // STATE VARIABLES
 // =============================================================================
 
-static TaskHandle_t  espnow_task_hdl = NULL;
+static TaskHandle_t  task_hdl = NULL;
 static QueueHandle_t espnow_queue = NULL;
 
 // =============================================================================
 // FORWARD DECLARATIONS
 // =============================================================================
 
-static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info,
-                           const uint8_t *data, int data_len);
-static void espnow_send_cb(const esp_now_send_info_t *tx_info,
-                           esp_now_send_status_t      status);
-static void espnow_task(void *pvParameters);
+static void recv_cb(const esp_now_recv_info_t *esp_now_info,
+                    const uint8_t *data, int data_len);
+static void send_cb(const esp_now_send_info_t *tx_info,
+                    esp_now_send_status_t      status);
+static void task(void *pvParameters);
 
 // =============================================================================
 // PUBLIC API - INITIALIZATION
@@ -102,10 +102,10 @@ esp_err_t espnow_init(void)
   ret = esp_now_init();
   ESP_ERROR_CHECK(ret);
 
-  ret = esp_now_register_recv_cb(espnow_recv_cb);
+  ret = esp_now_register_recv_cb(recv_cb);
   ESP_ERROR_CHECK(ret);
 
-  ret = esp_now_register_send_cb(espnow_send_cb);
+  ret = esp_now_register_send_cb(send_cb);
   ESP_ERROR_CHECK(ret);
 
   uint8_t             peer_addr[] = ESPNOW_PEER_ADDR;
@@ -119,13 +119,13 @@ esp_err_t espnow_init(void)
   ESP_ERROR_CHECK(ret);
 
   espnow_queue = xQueueCreate(ESP_NOW_QUEUE_SIZE, sizeof(espnow_event_t));
-  if (espnow_queue == NULL)
+  if (!espnow_queue)
   {
     ESP_LOGE(TAG, "Failed to create queue");
     return ESP_FAIL;
   }
 
-  task_hdl_init(&espnow_task_hdl, espnow_task, "espnow_task", ESPNOW_PRIORITY,
+  task_hdl_init(&task_hdl, task, "espnow_task", ESPNOW_PRIORITY,
                 ESPNOW_TASK_STACK_SIZE, NULL);
 
   ESP_LOGI(TAG, "ESP-NOW Initialized!");
@@ -210,8 +210,8 @@ void send_to_espnow(espnow_from_t from, espnow_event_info_data_type_t type,
 // PRIVATE IMPLEMENTATIONS - ESP-NOW CALLBACKS
 // =============================================================================
 
-static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info,
-                           const uint8_t *data, int data_len)
+static void recv_cb(const esp_now_recv_info_t *esp_now_info,
+                    const uint8_t *data, int data_len)
 {
 
   espnow_event_t event;
@@ -234,8 +234,8 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info,
   xQueueSend(espnow_queue, &event, portMAX_DELAY);
 }
 
-static void espnow_send_cb(const esp_now_send_info_t *tx_info,
-                           esp_now_send_status_t      status)
+static void send_cb(const esp_now_send_info_t *tx_info,
+                    esp_now_send_status_t      status)
 {
   espnow_event_t event;
   event.type = EVENT_SEND_CB;
@@ -258,7 +258,7 @@ static void espnow_send_cb(const esp_now_send_info_t *tx_info,
 // PRIVATE IMPLEMENTATIONS - EVENT PROCESSING TASK
 // =============================================================================
 
-static void espnow_task(void *pvParameters)
+static void task(void *pvParameters)
 {
   static const char *TAG = "ESPNOW_TASK";
   espnow_event_t     event;
@@ -312,17 +312,17 @@ static void espnow_task(void *pvParameters)
         // -----------------------------------------------------------------------
 #if IS_MASTER
       case TAP:
-        memcpy(kb_mgt_hid_get_current_report(), &data->key_report,
+        memcpy(kb_mgt_hid_get_current_key_report(), &data->key_report,
                sizeof(kb_mgt_hid_key_report_t));
-        kb_mgt_hid_send_report_unsafe();
+        kb_mgt_hid_send_key_report_unsafe();
         break;
 
       case BRIEF_TAP:
-        memcpy(kb_mgt_hid_get_current_report(), &data->key_report,
+        memcpy(kb_mgt_hid_get_current_key_report(), &data->key_report,
                sizeof(kb_mgt_hid_key_report_t));
-        kb_mgt_hid_send_report_unsafe();
+        kb_mgt_hid_send_key_report_unsafe();
         kb_mgt_hid_clear_report();
-        kb_mgt_hid_send_report_unsafe();
+        kb_mgt_hid_send_key_report_unsafe();
         break;
 
       case CONSUMER:
