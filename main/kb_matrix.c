@@ -17,6 +17,7 @@
 #include "config.h"
 #include "freertos/projdefs.h"
 #include "kb_mgt.h"
+#include "power_mgmt.h"
 #include "utils.h"
 #include <stdint.h>
 
@@ -119,23 +120,43 @@ void matrix_scan_stop(void)
   ESP_LOGI(TAG, "Matrix scanning stopped");
 }
 
+// =============================================================================
+// MAIN SCANNING TASK (with power management integration)
+// =============================================================================
+
 void matrix_scan_task(void *pvParameters)
 {
   key_event_t events[MAX_KEYS];
   uint8_t     event_count;
 
-  ESP_LOGI(TAG, "Matrix scan task started");
+  ESP_LOGI(TAG,
+           "Matrix scan task started - immediate response power management");
+  ESP_LOGI(TAG, "   Ultra-fast: 1ms, Quick: 5ms, Efficient: 25ms, Deep: 100ms");
+  ESP_LOGI(TAG,
+           "   ⚡ Zero latency activation - instant response on key press");
 
   while (1)
   {
-    if (scan(events, &event_count))
+    bool key_detected = scan(events, &event_count);
+
+    if (key_detected)
     {
       ESP_LOGD(TAG, "*** KEY EVENT DETECTED: %d events ***", event_count);
+
+      // Force immediate active mode for zero latency response
+      power_mgmt_force_active(get_current_time_ms());
+
       process_key_event(events, &event_count);
+
+      // Also notify of regular activity
+      power_mgmt_notify_activity(get_current_time_ms());
     }
 
     kb_mgt_proc_check_tap_timeouts(get_current_time_ms());
-    vTaskDelay(pdMS_TO_TICKS(SCAN_INTERVAL_MS));
+
+    // Get adaptive scan interval from power management
+    uint32_t scan_interval = power_mgmt_get_matrix_interval();
+    vTaskDelay(pdMS_TO_TICKS(scan_interval));
   }
 }
 

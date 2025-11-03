@@ -4,7 +4,7 @@
 
 #include "common.h"
 
-#define IS_MASTER 1
+#define IS_MASTER 0
 
 #define MATRIX_ROW 5
 #define MATRIX_COL 6
@@ -17,15 +17,19 @@
 #define BATT_LED_GPIO GPIO_NUM_7
 #define CONN_LED_GPIO GPIO_NUM_8
 
+// Sleep/Wake-up Configuration - Using column pins 0-5 for wake-up
+#define WAKEUP_PINS                                                            \
+  {GPIO_NUM_0, GPIO_NUM_1, GPIO_NUM_2, GPIO_NUM_3, GPIO_NUM_4, GPIO_NUM_5}
+#define WAKEUP_PINS_COUNT 6
+
 // Ultra Low Latency Configuration
 #define DEBOUNCE_TIME_MS   5   // Minimal debounce == Less latecy
 #define DEFAULT_TIMEOUT_MS 150 // For tap-hold functionality
 #define SCAN_INTERVAL_MS   1   // aggressive polling == Less latency
 
 // Optimized GPIO timing for speed
-#define GPIO_SETTLE_US  5 // Minimal stable GPIO settling
-#define ROW_DELAY_US    2 // Minimal row completion delay
-#define IDLE_TIMEOUT_MS 30000
+#define GPIO_SETTLE_US 5 // Minimal stable GPIO settling
+#define ROW_DELAY_US   2 // Minimal row completion delay
 
 // Wireless Configuration
 #define ESP_NOW_CHANNEL 1

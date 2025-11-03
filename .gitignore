@@ -2,3 +2,4 @@ build
 .cache
 .serena
 sdkconfig.old
+*.md

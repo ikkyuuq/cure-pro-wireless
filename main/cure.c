@@ -1,8 +1,10 @@
+#include "battery.h"
 #include "ble_gap.h"
+#include "esp_pm.h"
 #include "espnow.h"
 #include "indicator.h"
 #include "kb_matrix.h"
-#include "power.h"
+#include "power_mgmt.h"
 #if IS_MASTER
 #include "hid_gatt_svr_svc.h"
 #endif
@@ -78,7 +80,12 @@ void app_main(void)
   ret = indicator_init();
   ESP_ERROR_CHECK(ret);
 
+  ret = power_mgmt_init();
+  ESP_ERROR_CHECK(ret);
+
   power_task_start();
 
-  ESP_LOGI(TAG, "System initialized successfully");
+  power_mgmt_start();
+
+  ESP_LOGI(TAG, "System initialized successfully with power management");
 }

@@ -37,9 +37,10 @@ static bool    batt_blink_active = false;
 static color_t conn_blink_color = COLOR_OFF;
 static color_t batt_blink_color = COLOR_OFF;
 
-// Connection and Battery state
-static conn_state_t current_conn_state = CONN_STATE_WAITING;
-static batt_state_t current_batt_state = BATT_STATE_GOOD;
+// Connection, Battery, and Power state
+static conn_state_t  current_conn_state = CONN_STATE_WAITING;
+static batt_state_t  current_batt_state = BATT_STATE_GOOD;
+static power_state_t current_power_state = POWER_STATE_ACTIVE;
 
 // =============================================================================
 // FORWARD DECLARATIONS
@@ -136,6 +137,8 @@ conn_state_t indicator_get_conn_state(void) { return current_conn_state; }
 
 batt_state_t indicator_get_batt_state(void) { return current_batt_state; }
 
+power_state_t indicator_get_power_state(void) { return current_power_state; }
+
 void indicator_set_conn_state(conn_state_t state)
 {
   if (current_conn_state == state)
@@ -203,6 +206,125 @@ void indicator_set_batt_state(batt_state_t state)
     ESP_LOGI(TAG, "Battery state: CHARGING (Blue)");
     break;
   }
+}
+
+void indicator_set_power_state(power_state_t state)
+{
+  if (current_power_state == state)
+    return;
+
+  current_power_state = state;
+  const color_t off_color = COLOR_OFF;
+  const color_t green_color = COLOR_GREEN;
+  const color_t magenta_color = COLOR_MAGENTA;
+  const color_t dim_yellow_color = COLOR_DIM_YELLOW;
+
+  // Use BATTERY LED for power state indication (preserves connection LED!)
+  switch (state)
+  {
+  case POWER_STATE_ACTIVE:
+    // Active mode - bright magenta to show full responsiveness (eye-catching!)
+    set_color(magenta_color, batt_indicator_hdl);
+    ESP_LOGI(TAG, "Power state: ACTIVE (Magenta) - Full responsiveness");
+    break;
+
+  case POWER_STATE_NORMAL:
+    // Normal mode - bright green to show normal operation
+    set_color(green_color, batt_indicator_hdl);
+    ESP_LOGI(TAG, "Power state: NORMAL (Green) - Normal operation");
+    break;
+
+  case POWER_STATE_EFFICIENT:
+    // Efficient mode - dim yellow to show power saving (distinct from low
+    // battery!)
+    set_color(dim_yellow_color, batt_indicator_hdl);
+    ESP_LOGI(TAG, "Power state: EFFICIENT (Dim Yellow) - Power saving mode");
+    break;
+
+  case POWER_STATE_DEEP:
+    // Deep mode - turn off to show maximum power saving
+    set_color(off_color, batt_indicator_hdl);
+    ESP_LOGI(TAG, "Power state: DEEP (Off) - Maximum power saving");
+    break;
+  }
+}
+
+void indicator_update_combined_state(conn_state_t  conn_state,
+                                     batt_state_t  batt_state,
+                                     power_state_t power_state)
+{
+  // Store the new states
+  current_conn_state = conn_state;
+  current_batt_state = batt_state;
+  current_power_state = power_state;
+
+  const color_t off_color = COLOR_OFF;
+  const color_t green_color = COLOR_GREEN;
+  const color_t blue_color = COLOR_BLUE;
+  const color_t orange_color = COLOR_ORANGE;
+  const color_t red_color = COLOR_RED;
+  const color_t magenta_color = COLOR_MAGENTA;
+  const color_t dim_yellow_color = COLOR_DIM_YELLOW;
+
+  // Connection LED shows CONNECTION status (preserved functionality!)
+  switch (conn_state)
+  {
+  case CONN_STATE_CONNECTED:
+    set_color(green_color, conn_indicator_hdl);
+    break;
+  case CONN_STATE_WAITING:
+    start_blinking(conn_indicator_hdl, blue_color);
+    break;
+  case CONN_STATE_SLEEPING:
+    set_color(off_color, conn_indicator_hdl);
+    break;
+  }
+
+  // Battery LED: Priority system with DISTINCT colors
+  // 1. Critical/Low/Charging battery status takes priority (ATTENTION
+  // GRABBING!)
+  // 2. If battery is good, show power state (distinct colors)
+  if (batt_state == BATT_STATE_CRITICAL)
+  {
+    start_blinking(batt_indicator_hdl, red_color);
+    ESP_LOGD(TAG, "Battery CRITICAL (Red blinking) - overrides power state");
+  }
+  else if (batt_state == BATT_STATE_LOW)
+  {
+    set_color(orange_color, batt_indicator_hdl);
+    ESP_LOGD(TAG, "Battery LOW (Orange) - overrides power state");
+  }
+  else if (batt_state == BATT_STATE_CHARGING)
+  {
+    set_color(blue_color, batt_indicator_hdl);
+    ESP_LOGD(TAG, "Battery CHARGING (Blue) - overrides power state");
+  }
+  else
+  {
+    // Battery is good - show power state with DISTINCT colors
+    switch (power_state)
+    {
+    case POWER_STATE_ACTIVE:
+      set_color(magenta_color,
+                batt_indicator_hdl); // Magenta = Active (eye-catching!)
+      break;
+    case POWER_STATE_NORMAL:
+      set_color(green_color, batt_indicator_hdl); // Green = Normal
+      break;
+    case POWER_STATE_EFFICIENT:
+      set_color(dim_yellow_color,
+                batt_indicator_hdl); // Dim Yellow = Power saving (distinct from
+                                     // orange!)
+      break;
+    case POWER_STATE_DEEP:
+      set_color(off_color, batt_indicator_hdl); // Off = Deep saving
+      break;
+    }
+    ESP_LOGD(TAG, "Battery good - showing power state");
+  }
+
+  ESP_LOGD(TAG, "Combined state - Conn: %d, Batt: %d, Power: %d", conn_state,
+           batt_state, power_state);
 }
 
 // =============================================================================

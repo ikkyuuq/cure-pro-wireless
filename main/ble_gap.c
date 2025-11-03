@@ -19,6 +19,7 @@
 #include "espnow.h"
 #include "indicator.h"
 #include "kb_matrix.h"
+#include "nimble/nimble_port.h"
 
 static const char *TAG = "GAP";
 
@@ -347,5 +348,35 @@ static esp_err_t init_low_level(uint8_t mode)
 
   return ret;
 }
+
+// esp_err_t gap_deinit(void) {
+//     esp_err_t ret = 0;
+
+//     ret = nimble_port_stop();
+//     if (ret) {
+//         ESP_LOGE(TAG, "nimble_port_stop failed: %d", ret);
+//         return ret;
+//     }
+
+//     ret = esp_nimble_deinit();
+//     if (ret) {
+//         ESP_LOGE(TAG, "esp_nimble_deinit failed: %d", ret);
+//         return ret;
+//     }
+
+//     ret = esp_bt_controller_disable();
+//     if (ret) {
+//         ESP_LOGE(TAG, "esp_bt_controller_disable failed: %d", ret);
+//         return ret;
+//     }
+
+//     ret = esp_bt_controller_deinit();
+//     if (ret) {
+//         ESP_LOGE(TAG, "esp_bt_controller_deinit failed: %d", ret);
+//         return ret;
+//     }
+
+//     return ret;
+// }
 
 #endif // CONFIG_BT_NIMBLE_ENABLED

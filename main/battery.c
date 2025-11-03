@@ -1,5 +1,5 @@
 /**
- * @file power.c
+ * @file battery.c
  * @brief Battery and Power Management
  *
  * Monitors battery voltage and charging status through ADC readings.
@@ -12,9 +12,10 @@
  * - Battery level indication (good/low/critical)
  */
 
-#include "power.h"
+#include "battery.h"
 #include "config.h"
 #include "indicator.h"
+#include "power_mgmt.h"
 #include "utils.h"
 
 static const char *TAG = "POWER";
@@ -25,7 +26,7 @@ static const char *TAG = "POWER";
 
 static TaskHandle_t task_hdl = NULL;
 
-static power_state_t power_state = {
+battery_power_state_t power_state = {
     .usb_powered = false,
     .voltage_charging = false,
     .battery_voltage_mv = 0,
@@ -154,6 +155,12 @@ static void task(void *pvParameters)
       }
     }
 
-    vTaskDelay(pdMS_TO_TICKS(BATTERY_READ_INTERVAL_MS));
+    // Update power management system with battery status
+    power_mgmt_update_battery_status(power_state.battery_voltage_mv,
+                                     power_state.usb_powered);
+
+    // Get adaptive battery interval from power management
+    uint32_t battery_interval = power_mgmt_get_battery_interval();
+    vTaskDelay(pdMS_TO_TICKS(battery_interval));
   }
 }

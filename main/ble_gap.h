@@ -20,6 +20,7 @@
 #include "nimble/nimble_port_freertos.h"
 
 esp_err_t gap_init(uint8_t mode);
+// esp_err_t gap_deinit(void);
 
 esp_err_t gap_adv_init(uint16_t appearance);
 esp_err_t gap_adv_start(void);

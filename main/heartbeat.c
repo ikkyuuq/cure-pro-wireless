@@ -17,6 +17,7 @@
 #include "config.h"
 #include "freertos/projdefs.h"
 #include "indicator.h"
+#include "power_mgmt.h"
 #include "utils.h"
 
 static const char *TAG = "HEARTBEAT";
@@ -26,8 +27,7 @@ static const char *TAG = "HEARTBEAT";
 // =============================================================================
 
 static TaskHandle_t      task_hdl = NULL;
-static heartbeat_state_t state = {.received = false,
-                                            .last_req_time = 0};
+static heartbeat_state_t state = {.received = false, .last_req_time = 0};
 
 // =============================================================================
 // FORWARD DECLARATIONS
@@ -70,17 +70,12 @@ static void task(void *pvParameters)
   while (1)
   {
     // Send periodic heartbeat requests
-    if (get_current_time_ms() - state.last_req_time >=
-        HEARTBEAT_INTERVAL_MS)
+    if (get_current_time_ms() - state.last_req_time >= HEARTBEAT_INTERVAL_MS)
     {
       state.received = false;
       state.last_req_time = get_current_time_ms();
       send_to_espnow(SLAVE, REQ_HEARTBEAT, NULL);
       ESP_LOGD(TAG, "Heartbeat request sent");
-    }
-    else
-    {
-      ESP_LOGE(TAG, "Failed to take heartbeat mutex");
     }
 
     // Monitor heartbeat response status
@@ -97,8 +92,7 @@ static void task(void *pvParameters)
       // No heartbeat response - check timeout conditions
       if (state.last_req_time > 0)
       {
-        uint32_t time_since_req =
-            get_current_time_ms() - state.last_req_time;
+        uint32_t time_since_req = get_current_time_ms() - state.last_req_time;
 
         // Transition to waiting state after stable transmission period
         if (time_since_req > HEARTBEAT_STABLE_MS &&
@@ -114,11 +108,13 @@ static void task(void *pvParameters)
         {
           indicator_set_conn_state(CONN_STATE_SLEEPING);
           ESP_LOGI(TAG, "Master timeout - entering sleep state");
-          // TODO: Implement deep sleep mode
+          // TODO: Implement sleep mode
         }
       }
     }
 
-    vTaskDelay(pdMS_TO_TICKS(500));
+    // Get adaptive heartbeat interval from power management
+    uint32_t heartbeat_interval = power_mgmt_get_heartbeat_interval();
+    vTaskDelay(pdMS_TO_TICKS(heartbeat_interval));
   }
 }
