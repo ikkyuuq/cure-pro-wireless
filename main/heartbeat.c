@@ -67,6 +67,21 @@ static void task(void *pvParameters)
 {
   ESP_LOGI(TAG, "Heartbeat task started");
 
+  // Subscribe to watchdog
+  esp_err_t wdt_ret = esp_task_wdt_add(NULL);
+  if (wdt_ret == ESP_OK)
+  {
+    ESP_LOGI(TAG, "Heartbeat task subscribed to watchdog");
+  }
+  else
+  {
+    ESP_LOGW(TAG, "Failed to subscribe to watchdog: %d", wdt_ret);
+  }
+
+  // Time-based watchdog reset (handles adaptive intervals up to 15s)
+  uint32_t       last_wdt_reset_time = get_current_time_ms();
+  const uint32_t WDT_RESET_INTERVAL_MS = 2000; // Reset every 2 seconds
+
   while (1)
   {
     // Send periodic heartbeat requests
@@ -111,6 +126,14 @@ static void task(void *pvParameters)
           // TODO: Implement sleep mode
         }
       }
+    }
+
+    // Time-based watchdog reset (independent of adaptive interval)
+    uint32_t current_time = get_current_time_ms();
+    if ((current_time - last_wdt_reset_time) >= WDT_RESET_INTERVAL_MS)
+    {
+      esp_task_wdt_reset();
+      last_wdt_reset_time = current_time;
     }
 
     // Get adaptive heartbeat interval from power management

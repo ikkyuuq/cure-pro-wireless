@@ -263,8 +263,44 @@ static void task(void *pvParameters)
   static const char *TAG = "ESPNOW_TASK";
   espnow_event_t     event;
 
-  while (xQueueReceive(espnow_queue, &event, portMAX_DELAY))
+  // Subscribe to watchdog
+  esp_err_t wdt_ret = esp_task_wdt_add(NULL);
+  if (wdt_ret == ESP_OK)
   {
+    ESP_LOGI(TAG, "ESP-NOW task subscribed to watchdog");
+  }
+  else
+  {
+    ESP_LOGW(TAG, "Failed to subscribe to watchdog: %d", wdt_ret);
+  }
+
+  // Time-based watchdog reset to handle continuous queue activity
+  uint32_t       last_wdt_reset_time = xTaskGetTickCount();
+  const uint32_t WDT_RESET_INTERVAL_TICKS = pdMS_TO_TICKS(1000); // 1 second
+
+  while (1)
+  {
+    // Receive with shorter timeout to check watchdog periodically
+    if (xQueueReceive(espnow_queue, &event, pdMS_TO_TICKS(100)) != pdTRUE)
+    {
+      // No event received, check if we need to reset watchdog
+      uint32_t current_ticks = xTaskGetTickCount();
+      if ((current_ticks - last_wdt_reset_time) >= WDT_RESET_INTERVAL_TICKS)
+      {
+        esp_task_wdt_reset();
+        last_wdt_reset_time = current_ticks;
+      }
+      continue;
+    }
+
+    // Check watchdog before processing event (handles continuous message flow)
+    uint32_t current_ticks = xTaskGetTickCount();
+    if ((current_ticks - last_wdt_reset_time) >= WDT_RESET_INTERVAL_TICKS)
+    {
+      esp_task_wdt_reset();
+      last_wdt_reset_time = current_ticks;
+    }
+
     switch (event.type)
     {
     case EVENT_RECV_CB:

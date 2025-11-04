@@ -135,6 +135,21 @@ void matrix_scan_task(void *pvParameters)
   ESP_LOGI(TAG,
            "   ⚡ Zero latency activation - instant response on key press");
 
+  // Subscribe to watchdog
+  esp_err_t wdt_ret = esp_task_wdt_add(NULL);
+  if (wdt_ret == ESP_OK)
+  {
+    ESP_LOGI(TAG, "Matrix scan task subscribed to watchdog");
+  }
+  else
+  {
+    ESP_LOGW(TAG, "Failed to subscribe to watchdog: %d", wdt_ret);
+  }
+
+  // Track time for adaptive watchdog reset
+  uint32_t       last_wdt_reset_time = get_current_time_ms();
+  const uint32_t WDT_RESET_INTERVAL_MS = 1000; // Reset every 1 second
+
   while (1)
   {
     bool key_detected = scan(events, &event_count);
@@ -153,6 +168,14 @@ void matrix_scan_task(void *pvParameters)
     }
 
     kb_mgt_proc_check_tap_timeouts(get_current_time_ms());
+
+    // Time-based watchdog reset (independent of adaptive scan interval)
+    uint32_t current_time = get_current_time_ms();
+    if ((current_time - last_wdt_reset_time) >= WDT_RESET_INTERVAL_MS)
+    {
+      esp_task_wdt_reset();
+      last_wdt_reset_time = current_time;
+    }
 
     // Get adaptive scan interval from power management
     uint32_t scan_interval = power_mgmt_get_matrix_interval();

@@ -25,15 +25,18 @@ static const char *TAG = "POWER_MGMT";
 
 static const power_config_t DEFAULT_CONFIG = {
     // Matrix scanning intervals - optimized for immediate responsiveness
-    .active_scan_ms = 1, // Ultra-fast scan when actively typing
-    .normal_scan_ms = 5, // Quick scan after short inactivity
+    .active_scan_ms = 1,     // Ultra-fast scan when actively typing
+    .normal_scan_ms = 5,     // Quick scan after short inactivity
     .efficient_scan_ms = 25, // Power saving but still reasonable for idle
     .deep_scan_ms = 100,     // Maximum efficiency for long idle periods
 
     // Mode transition timeouts - more patient for better UX
-    .active_timeout_ms = 30000, // 30 seconds to normal mode (more time for continuous typing)
-    .normal_timeout_ms = 60000, // 60 seconds to efficient mode (longer normal period)
-    .efficient_timeout_ms = 90000, // 90 seconds to deep mode (very long idle before deep)
+    .active_timeout_ms =
+        30000, // 30 seconds to normal mode (more time for continuous typing)
+    .normal_timeout_ms =
+        60000, // 60 seconds to efficient mode (longer normal period)
+    .efficient_timeout_ms =
+        90000, // 90 seconds to deep mode (very long idle before deep)
 
     // Component intervals
     .battery_read_interval_ms = 30000,   // Read battery every 30 seconds
@@ -442,6 +445,17 @@ static void power_mgmt_task(void *pvParameters)
 {
   ESP_LOGI(TAG, "Power management task running");
 
+  // Subscribe to watchdog
+  esp_err_t wdt_ret = esp_task_wdt_add(NULL);
+  if (wdt_ret == ESP_OK)
+  {
+    ESP_LOGI(TAG, "Power management task subscribed to watchdog");
+  }
+  else
+  {
+    ESP_LOGW(TAG, "Failed to subscribe to watchdog: %d", wdt_ret);
+  }
+
   while (1)
   {
     uint32_t current_time = get_current_time_ms();
@@ -451,6 +465,9 @@ static void power_mgmt_task(void *pvParameters)
       update_power_mode(current_time);
       xSemaphoreGive(state_mutex);
     }
+
+    // Reset watchdog every loop iteration (1s interval, well within 5s timeout)
+    esp_task_wdt_reset();
 
     // Check every 1 second
     vTaskDelay(pdMS_TO_TICKS(1000));
