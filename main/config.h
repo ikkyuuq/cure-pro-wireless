@@ -23,9 +23,10 @@
 #define WAKEUP_PINS_COUNT 6
 
 // Ultra Low Latency Configuration
-#define DEBOUNCE_TIME_MS   4   // Minimal debounce == Less latecy
-#define DEFAULT_TIMEOUT_MS 120 // Optimized for quick typing (reduced from 150ms)
-#define SCAN_INTERVAL_MS   1   // aggressive polling == Less latency
+#define DEBOUNCE_TIME_MS 4 // Minimal debounce == Less latecy
+#define DEFAULT_TIMEOUT_MS                                                     \
+  120                      // Optimized for quick typing (reduced from 150ms)
+#define SCAN_INTERVAL_MS 1 // aggressive polling == Less latency
 
 // Optimized GPIO timing for speed
 #define GPIO_SETTLE_US 5 // Minimal stable GPIO settling
