@@ -11,9 +11,9 @@ static const key_def_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
     //      Z  X  C  V  B
     //                  L1/TAB  GUI/SPC
     [0] = {{NORM_KEY(KC_EQUAL), NORM_KEY(KC_1), NORM_KEY(KC_2), NORM_KEY(KC_3), NORM_KEY(KC_4), NORM_KEY(KC_5)},
-           {NORM_KEY(KC_TAB), NORM_KEY(KC_Q), NORM_KEY(KC_W), NORM_KEY(KC_E), NORM_KEY(KC_R), NORM_KEY(KC_T)},
-           {NORM_KEY(KC_LCTRL), MT_TO(KC_LGUI, KC_A, 200), MT_TO(KC_LALT, KC_S, 170), MT_TO(KC_LCTRL, KC_D, 150), MT_TO(KC_LSHIFT, KC_F, 140), NORM_KEY(KC_G)},
-           {NORM_KEY(KC_LALT), NORM_KEY(KC_Z), NORM_KEY(KC_X), NORM_KEY(KC_C), NORM_KEY(KC_V), NORM_KEY(KC_B)},
+           {NORM_KEY(KC_ESC), NORM_KEY(KC_Q), NORM_KEY(KC_W), NORM_KEY(KC_E), NORM_KEY(KC_R), NORM_KEY(KC_T)},
+           {MOD_KEY(KC_LCTRL), MT_TO(KC_LGUI, KC_A, 200), MT_TO(KC_LALT, KC_S, 170), MT_TO(KC_LCTRL, KC_D, 150), MT_TO(KC_LSHIFT, KC_F, 140), NORM_KEY(KC_G)},
+           {MOD_KEY(KC_LALT), NORM_KEY(KC_Z), NORM_KEY(KC_X), NORM_KEY(KC_C), NORM_KEY(KC_V), NORM_KEY(KC_B)},
            {NORM_KEY(KC_NO), NORM_KEY(KC_NO), NORM_KEY(KC_NO), NORM_KEY(KC_NO), LT_TO(1, KC_TAB, 100), MT_TO(KC_LGUI, KC_SPACE, 200)}},
 #else
     // Layer 0 - Base layer Right Side (Homerow Mods: SCAG)
@@ -34,14 +34,14 @@ static const key_def_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
     // =    F2    F3    F4    F5    F6
     // TAB  `     <     >     -     |
     // CTL  !     *     /     =     &
-    //      ~     +     [     ]     %
+    //      ~     +     ?     _     %
     //                        TRNS TRNS
     [1] =
         {
             {TRANS_KEY(), NORM_KEY(KC_F2), NORM_KEY(KC_F3), NORM_KEY(KC_F4), NORM_KEY(KC_F5), NORM_KEY(KC_F6)},
             {TRANS_KEY(), NORM_KEY(KC_GRAVE), SHIFT_KEY(KC_COMMA), SHIFT_KEY(KC_DOT), NORM_KEY(KC_MINUS), SHIFT_KEY(KC_BSLASH)},
             {TRANS_KEY(), SHIFT_KEY(KC_1), SHIFT_KEY(KC_8), NORM_KEY(KC_SLASH), NORM_KEY(KC_EQUAL), SHIFT_KEY(KC_7)},
-            {NORM_KEY(KC_NO), SHIFT_KEY(KC_GRAVE), SHIFT_KEY(KC_EQUAL), NORM_KEY(KC_LBRC), NORM_KEY(KC_RBRC), SHIFT_KEY(KC_5)},
+            {TRANS_KEY(), SHIFT_KEY(KC_GRAVE), SHIFT_KEY(KC_EQUAL), SHIFT_KEY(KC_SLASH), SHIFT_KEY(KC_MINUS), SHIFT_KEY(KC_5)},
             {NORM_KEY(KC_NO), NORM_KEY(KC_NO), NORM_KEY(KC_NO), NORM_KEY(KC_NO), TRANS_KEY(), TRANS_KEY()},
         },
 #else
