@@ -25,19 +25,15 @@ static const char *TAG = "POWER_MGMT";
 
 static const power_config_t DEFAULT_CONFIG = {
     // Matrix scanning intervals - optimized for immediate responsiveness
-    .active_scan_ms =
-        1, // Ultra-fast scan when actively typing (maximum responsiveness)
-    .normal_scan_ms = 5, // Quick scan after short inactivity (still responsive)
+    .active_scan_ms = 1, // Ultra-fast scan when actively typing
+    .normal_scan_ms = 5, // Quick scan after short inactivity
     .efficient_scan_ms = 25, // Power saving but still reasonable for idle
     .deep_scan_ms = 100,     // Maximum efficiency for long idle periods
 
     // Mode transition timeouts - more patient for better UX
-    .active_timeout_ms =
-        5000, // 5 seconds to normal mode (more time for continuous typing)
-    .normal_timeout_ms =
-        20000, // 20 seconds to efficient mode (longer normal period)
-    .efficient_timeout_ms =
-        90000, // 90 seconds to deep mode (very long idle before deep)
+    .active_timeout_ms = 30000, // 30 seconds to normal mode (more time for continuous typing)
+    .normal_timeout_ms = 60000, // 60 seconds to efficient mode (longer normal period)
+    .efficient_timeout_ms = 90000, // 90 seconds to deep mode (very long idle before deep)
 
     // Component intervals
     .battery_read_interval_ms = 30000,   // Read battery every 30 seconds

@@ -285,11 +285,13 @@ static esp_err_t hid_init(void)
 
 static result_t hid_add_key_unsafe(uint8_t keycode)
 {
+  ESP_LOGD(TAG, "Adding key 0x%02x to HID report", keycode);
   for (int i = 0; i < HID_MAX_KEYS_IN_REPORT; i++)
   {
     if (hid_key_report.keys[i] == 0)
     {
       hid_key_report.keys[i] = keycode;
+      ESP_LOGD(TAG, "Added key 0x%02x to slot %d", keycode, i);
       return SUCCESS;
     }
   }
@@ -300,6 +302,7 @@ static result_t hid_add_key_unsafe(uint8_t keycode)
 
 static void hid_remove_key_unsafe(uint8_t keycode)
 {
+  ESP_LOGD(TAG, "Removing key 0x%02x from HID report", keycode);
   for (int i = 0; i < HID_MAX_KEYS_IN_REPORT; i++)
   {
     if (hid_key_report.keys[i] == keycode)
@@ -311,7 +314,7 @@ static void hid_remove_key_unsafe(uint8_t keycode)
       }
       hid_key_report.keys[HID_KEY_SHIFT_LAST_IDX] = 0;
 
-      ESP_LOGD(TAG, "Removed key 0x%02x from HID report", keycode);
+      ESP_LOGD(TAG, "Successfully removed key 0x%02x from slot %d", keycode, i);
       break;
     }
   }
@@ -457,6 +460,7 @@ static void proc_handle_press(key_def_t key, uint8_t row, uint8_t col,
   switch (key.type)
   {
   case KEY_TYPE_NORMAL:
+    ESP_LOGD(TAG, "Processing normal key: keycode=0x%02x", key.keycode);
     hid_add_key_unsafe(key.keycode);
     break;
 

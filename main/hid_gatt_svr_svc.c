@@ -58,19 +58,21 @@ const unsigned char HID_REPORT_MAPS[] = {
     0x91,
     0x03, //   Output (Const,Var,Abs)
     0x95,
-    0x05, //   Report Count (5)
+    0x06, //   Report Count (6)
     0x75,
     0x08, //   Report Size (8)
     0x15,
     0x00, //   Logical Minimum (0)
-    0x25,
-    0x65, //   Logical Maximum (101)
+    0x26,
+    0xE7,
+    0x00, //   Logical Maximum (231 - 0xE7) - Extended to support all standard
+          //   keyboard keys including F1-F24
     0x05,
     0x07, //   Usage Page (Kbrd/Keypad)
     0x19,
     0x00, //   Usage Minimum (0x00)
     0x29,
-    0x65, //   Usage Maximum (0x65)
+    0xE7, //   Usage Maximum (0xE7 - 231)
     0x81,
     0x00, //   Input (Data,Array,Abs)
     0xC0, // End Collection
@@ -101,7 +103,7 @@ const unsigned char HID_REPORT_MAPS[] = {
     0x81,
     0x00, //   Input (Data,Array,Abs)
     0xC0, // End Collection
-          // Total: 65 + 25 = 90 bytes
+    // Total: 67 + 25 = 92 bytes (updated: extended keyboard usage to 0xE7)
 };
 
 static esp_hid_raw_report_map_t hid_report_maps[] = {
