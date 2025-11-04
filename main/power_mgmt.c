@@ -121,6 +121,9 @@ void power_mgmt_stop(void)
 {
   if (task_handle != NULL)
   {
+    // Unsubscribe from watchdog before deleting task
+    esp_task_wdt_delete(task_handle);
+
     vTaskDelete(task_handle);
     task_handle = NULL;
     ESP_LOGI(TAG, "Power management task stopped");

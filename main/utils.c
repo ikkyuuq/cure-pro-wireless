@@ -26,6 +26,10 @@ void task_hdl_cleanup(TaskHandle_t task_hdl)
 {
   if (task_hdl != NULL)
   {
+    // Unsubscribe from watchdog before deleting task
+    // This prevents dangling WDT subscriptions and memory corruption
+    esp_task_wdt_delete(task_hdl);
+
     vTaskDelete(task_hdl);
     task_hdl = NULL;
   }

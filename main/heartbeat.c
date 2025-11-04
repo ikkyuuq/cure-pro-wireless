@@ -138,6 +138,18 @@ static void task(void *pvParameters)
 
     // Get adaptive heartbeat interval from power management
     uint32_t heartbeat_interval = power_mgmt_get_heartbeat_interval();
-    vTaskDelay(pdMS_TO_TICKS(heartbeat_interval));
+
+    // Break up long sleep into smaller chunks to reset WDT during sleep
+    // Sleep in 1-second chunks to stay well within 5s WDT timeout
+    const uint32_t SLEEP_CHUNK_MS = 1000;
+    uint32_t       remaining_sleep = heartbeat_interval;
+    while (remaining_sleep > 0)
+    {
+      uint32_t sleep_time =
+          (remaining_sleep > SLEEP_CHUNK_MS) ? SLEEP_CHUNK_MS : remaining_sleep;
+      vTaskDelay(pdMS_TO_TICKS(sleep_time));
+      esp_task_wdt_reset(); // Reset WDT after each 1-second chunk
+      remaining_sleep -= sleep_time;
+    }
   }
 }

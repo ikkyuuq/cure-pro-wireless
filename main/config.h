@@ -40,6 +40,8 @@
 #define BATT_ADC_CHAN             ADC_CHANNEL_6
 #define BATT_ADC_ATTEN            ADC_ATTEN_DB_12
 #define BATT_BIT_WIDTH            ADC_BITWIDTH_12
+#define BATT_VOLTAGE_MULT         2
+#define BATT_VOLTAGE_REF          3300
 #define BATT_VOLTAGE_DIVIDER      261
 #define BATT_VOLTAGE_NOMINAL_MV   3300
 #define BATT_VOLTAGE_CRITICAL_MV  3000

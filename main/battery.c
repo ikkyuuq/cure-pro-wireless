@@ -83,30 +83,54 @@ static void task_stop(void)
 
 static uint32_t read_battery_voltage(void)
 {
-  adc_oneshot_unit_handle_t adc1_handle = NULL;
+  ESP_LOGI(TAG, "Starting battery voltage read");
+  esp_task_wdt_reset(); // Reset WDT before ADC operations
 
+  adc_oneshot_unit_handle_t adc1_handle = NULL;
+  esp_err_t                 ret;
+
+  ESP_LOGI(TAG, "Initializing ADC unit");
   adc_oneshot_unit_init_cfg_t init_config = {
       .unit_id = ADC_UNIT_1,
   };
-  ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config, &adc1_handle));
+  ret = adc_oneshot_new_unit(&init_config, &adc1_handle);
+  if (ret != ESP_OK)
+  {
+    ESP_LOGE(TAG, "ADC unit init failed: %d", ret);
+    return 0;
+  }
+  esp_task_wdt_reset(); // Reset WDT after ADC init
 
+  ESP_LOGI(TAG, "Configuring ADC channel");
   adc_oneshot_chan_cfg_t config = {
       .bitwidth = BATT_BIT_WIDTH,
       .atten = BATT_ADC_ATTEN,
   };
-  ESP_ERROR_CHECK(
-      adc_oneshot_config_channel(adc1_handle, BATT_ADC_CHAN, &config));
+  ret = adc_oneshot_config_channel(adc1_handle, BATT_ADC_CHAN, &config);
+  if (ret != ESP_OK)
+  {
+    ESP_LOGE(TAG, "ADC channel config failed: %d", ret);
+    adc_oneshot_del_unit(adc1_handle);
+    return 0;
+  }
+  esp_task_wdt_reset(); // Reset WDT after channel config
 
+  ESP_LOGI(TAG, "Reading ADC value");
   int adc_raw = 0;
-  ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, BATT_ADC_CHAN, &adc_raw));
-  ESP_ERROR_CHECK(adc_oneshot_del_unit(adc1_handle));
+  ret = adc_oneshot_read(adc1_handle, BATT_ADC_CHAN, &adc_raw);
+  if (ret != ESP_OK)
+  {
+    ESP_LOGE(TAG, "ADC read failed: %d", ret);
+  }
+  esp_task_wdt_reset(); // Reset WDT after ADC read
 
-  // Calculate voltage: raw * 3.3V / 4095 * divider ratio
-  // Using integer math to avoid floating point
-  uint32_t voltage_mv = (adc_raw * 3300 * BATT_VOLTAGE_DIVIDER) / (4095 * 100);
+  ESP_LOGI(TAG, "Cleaning up ADC unit");
+  adc_oneshot_del_unit(adc1_handle);
 
-  ESP_LOGD(TAG, "RAW ADC: %d | Voltage: %lu mV | Divider: %d", adc_raw,
-           voltage_mv, BATT_VOLTAGE_DIVIDER);
+  uint32_t voltage_mv = (adc_raw * BATT_VOLTAGE_REF * BATT_VOLTAGE_MULT) / 4095;
+
+  ESP_LOGI(TAG, "RAW ADC: %d | Voltage: %lu mV | Multiplier: %d", adc_raw,
+           voltage_mv, BATT_VOLTAGE_MULT);
 
   return voltage_mv;
 }
@@ -133,11 +157,30 @@ static void task(void *pvParameters)
   // Time-based watchdog reset (handles 30s battery read interval)
   uint32_t       last_wdt_reset_time = get_current_time_ms();
   const uint32_t WDT_RESET_INTERVAL_MS = 2000; // Reset every 2 seconds
+  uint32_t       loop_count = 0;
+
+  ESP_LOGI(TAG, "Power task entering main loop");
 
   while (1)
   {
+    loop_count++;
+
+    // Reset WDT at the start of every loop
+    esp_task_wdt_reset();
+    last_wdt_reset_time = get_current_time_ms();
+
+    // Debug log every 10 loops to see if task is running
+    if (loop_count % 10 == 0)
+    {
+      ESP_LOGI(TAG, "Power task loop %lu, WDT reset at start of loop",
+               loop_count);
+    }
+
     // Read power status
+    esp_task_wdt_reset(); // Reset before USB check
     power_state.usb_powered = usb_serial_jtag_is_connected();
+
+    esp_task_wdt_reset(); // Reset before battery read
     power_state.battery_voltage_mv = read_battery_voltage();
     power_state.voltage_charging =
         (power_state.battery_voltage_mv > BATT_VOLTAGE_THRESHOLD_MV);
@@ -178,12 +221,27 @@ static void task(void *pvParameters)
     uint32_t current_time = get_current_time_ms();
     if ((current_time - last_wdt_reset_time) >= WDT_RESET_INTERVAL_MS)
     {
+      ESP_LOGI(TAG, "Power task resetting watchdog after %lu ms",
+               current_time - last_wdt_reset_time);
       esp_task_wdt_reset();
       last_wdt_reset_time = current_time;
     }
 
     // Get adaptive battery interval from power management
     uint32_t battery_interval = power_mgmt_get_battery_interval();
-    vTaskDelay(pdMS_TO_TICKS(battery_interval));
+    ESP_LOGD(TAG, "Power task sleeping for %lu ms", battery_interval);
+
+    // Break up long sleep into smaller chunks to reset WDT during sleep
+    // Sleep in 1-second chunks to stay well within 5s WDT timeout
+    const uint32_t SLEEP_CHUNK_MS = 1000;
+    uint32_t       remaining_sleep = battery_interval;
+    while (remaining_sleep > 0)
+    {
+      uint32_t sleep_time =
+          (remaining_sleep > SLEEP_CHUNK_MS) ? SLEEP_CHUNK_MS : remaining_sleep;
+      vTaskDelay(pdMS_TO_TICKS(sleep_time));
+      esp_task_wdt_reset(); // Reset WDT after each 1-second chunk
+      remaining_sleep -= sleep_time;
+    }
   }
 }
