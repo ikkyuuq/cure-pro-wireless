@@ -147,8 +147,8 @@ void matrix_scan_task(void *pvParameters)
   }
 
   // Track time for adaptive watchdog reset
-  uint32_t       last_wdt_reset_time = get_current_time_ms();
   const uint32_t WDT_RESET_INTERVAL_MS = 1000; // Reset every 1 second
+  uint32_t       last_wdt_reset_time = get_current_time_ms();
 
   while (1)
   {
