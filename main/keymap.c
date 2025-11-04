@@ -19,7 +19,7 @@ static const key_def_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
            {MOD_KEY(KC_LALT), NORM_KEY(KC_Z), NORM_KEY(KC_X), NORM_KEY(KC_C),
             NORM_KEY(KC_V), NORM_KEY(KC_B)},
            {NORM_KEY(KC_NO), NORM_KEY(KC_NO), NORM_KEY(KC_NO), NORM_KEY(KC_NO),
-            LT_TO(1, KC_TAB, 100), MT_TO(KC_LGUI, KC_SPACE, 130)}},
+            LT_TO(1, KC_TAB, 100), MT_TO(KC_LGUI, KC_SPACE, 100)}},
 #else
     // Layer 0 - Base layer Right Side
     //        6    7    8    9    0    -
@@ -35,7 +35,7 @@ static const key_def_t keymaps[MAX_LAYERS][MATRIX_ROW][MATRIX_COL] = {
             NORM_KEY(KC_SEMICOLON), LT(1, KC_QUOT)},
            {NORM_KEY(KC_N), NORM_KEY(KC_M), NORM_KEY(KC_COMMA),
             NORM_KEY(KC_DOT), NORM_KEY(KC_SLASH), MOD_KEY(KC_LGUI)},
-           {MT_TO(KC_RSHIFT, KC_ENTER, 130), LT_TO(2, KC_BSPC, 100),
+           {MT_TO(KC_RSHIFT, KC_ENTER, 100), LT_TO(2, KC_BSPC, 100),
             NORM_KEY(KC_NO), NORM_KEY(KC_NO), NORM_KEY(KC_NO),
             NORM_KEY(KC_NO)}},
 #endif

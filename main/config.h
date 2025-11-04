@@ -4,7 +4,7 @@
 
 #include "common.h"
 
-#define IS_MASTER 0
+#define IS_MASTER 1
 
 #define MATRIX_ROW 5
 #define MATRIX_COL 6
@@ -24,7 +24,7 @@
 
 // Ultra Low Latency Configuration
 #define DEBOUNCE_TIME_MS   5   // Minimal debounce == Less latecy
-#define DEFAULT_TIMEOUT_MS 150 // For tap-hold functionality
+#define DEFAULT_TIMEOUT_MS 120 // Optimized for quick typing (reduced from 150ms)
 #define SCAN_INTERVAL_MS   1   // aggressive polling == Less latency
 
 // Optimized GPIO timing for speed

@@ -15,6 +15,7 @@
 #include "espnow.h"
 #include "freertos/projdefs.h"
 #include "keymap.h"
+#include "power_mgmt.h"
 
 static const char       *TAG = "KB_MGT";
 static SemaphoreHandle_t sem_hdl;
@@ -531,6 +532,7 @@ static void proc_handle_release(uint8_t row, uint8_t col, uint32_t timestamp)
   ESP_LOGD(TAG, "Processing key release at [%d:%d], type=%d", row, col,
            stored_key.type);
 
+  
   switch (stored_key.type)
   {
   case KEY_TYPE_NORMAL:
