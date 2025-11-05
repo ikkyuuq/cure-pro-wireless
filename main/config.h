@@ -4,7 +4,7 @@
 
 #include "common.h"
 
-#define IS_MASTER 0
+#define IS_MASTER 1
 
 #define MATRIX_ROW 5
 #define MATRIX_COL 6
@@ -42,10 +42,9 @@
 #define BATT_BIT_WIDTH            ADC_BITWIDTH_12
 #define BATT_VOLTAGE_MULT         2
 #define BATT_VOLTAGE_REF          3300
-#define BATT_VOLTAGE_DIVIDER      261
-#define BATT_VOLTAGE_NOMINAL_MV   3300
-#define BATT_VOLTAGE_CRITICAL_MV  3000
-#define BATT_VOLTAGE_THRESHOLD_MV 4200
+#define BATT_VOLTAGE_NOMINAL_MV   3600
+#define BATT_VOLTAGE_CRITICAL_MV  3200
+#define BATT_VOLTAGE_THRESHOLD_MV 4000
 
 // HID Configuration
 #define HID_DEVICE_NAME  "CureProWL"
